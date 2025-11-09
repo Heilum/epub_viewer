@@ -153,11 +153,12 @@ class _EpubViewerState extends State<EpubViewer> {
     transparentBackground: true,
     supportZoom: false,
     allowsInlineMediaPlayback: true,
-    disableLongPressContextMenuOnLinks: false,
+    disableLongPressContextMenuOnLinks: true,
     iframeAllowFullscreen: true,
     allowsLinkPreview: false,
     verticalScrollBarEnabled: false,
     selectionGranularity: SelectionGranularity.CHARACTER,
+    disableContextMenu: true, // Disable native context menu
   );
 
   @override
@@ -377,7 +378,12 @@ class _EpubViewerState extends State<EpubViewer> {
         contextMenu: widget.suppressNativeContextMenu 
             ? ContextMenu(
                 menuItems: [],
-                settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: true),
+                settings: ContextMenuSettings(
+                  hideDefaultSystemContextMenuItems: true,
+                ),
+                onCreateContextMenu: (hitTestResult) async {
+                  // Completely disable context menu
+                },
               )
             : widget.selectionContextMenu,
         key: webViewKey,

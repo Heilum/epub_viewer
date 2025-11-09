@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_epub_viewer/flutter_epub_viewer.dart';
 import 'package:uuid/uuid.dart';
 
 import 'annotation_manager.dart';
 import 'app_annotation.dart';
 import 'chapter_drawer.dart';
+import 'selection_context_menu.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,11 +45,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   var textSelectionCfi = '';
   var selectedText = '';
+  SelectionContextMenu? _contextMenu;
 
   bool isLoading = true;
   double progress = 0.0;
   int fontSize = 16;
-  
+
   // Debouncing for annotation clicks
   String? _lastClickedCfi;
   DateTime? _lastClickTime;
@@ -71,6 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     annotationManager.removeListener(_onAnnotationsChanged);
+    _contextMenu?.hide();
     super.dispose();
   }
 
@@ -198,7 +202,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!hasExistingNotes) {
       epubController.addUnderline(
         cfi: textSelectionCfi,
-        color: Colors.red,
+        color: const Color(0xffFF7300),
         isDashed: true,
       );
     }
@@ -235,41 +239,58 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {});
   }
 
-  // Build context menu items dynamically
-  List<ContextMenuItem> _buildContextMenuItems() {
-    final items = <ContextMenuItem>[];
-    final hasHighlight = annotationManager.hasHighlight(textSelectionCfi);
+  // Copy selected text to clipboard
+  Future<void> _copyToClipboard() async {
+    if (selectedText.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: selectedText));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('已复制'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    }
+  }
 
-    if (hasHighlight) {
-      // If already highlighted, show "取消高亮"
-      items.add(
-        ContextMenuItem(
-          title: "取消高亮",
-          id: 1,
-          action: _removeHighlightAnnotation,
-        ),
-      );
-    } else {
-      // Otherwise show "高亮"
-      items.add(
-        ContextMenuItem(
-          title: "高亮",
-          id: 2,
-          action: _addHighlightAnnotation,
+  // Search selected text
+  void _searchSelectedText() {
+    if (selectedText.isNotEmpty) {
+      // TODO: Implement search functionality
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('查询: $selectedText'),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
+  }
 
-    // Always show "做笔记"
-    items.add(
-      ContextMenuItem(
-        title: "做笔记",
-        id: 3,
-        action: _addNoteAnnotation,
-      ),
-    );
+  // Listen to selected text (text-to-speech)
+  void _listenToSelectedText() {
+    if (selectedText.isNotEmpty) {
+      // TODO: Implement text-to-speech functionality
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('听当前: $selectedText'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
-    return items;
+  // Report error in selected text
+  void _reportError() {
+    if (selectedText.isNotEmpty) {
+      // TODO: Implement error reporting functionality
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('纠错: $selectedText'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -364,12 +385,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       theme: EpubTheme.light(),
                       allowScriptedContent: true,
                     ),
-                    selectionContextMenu: ContextMenu(
-                      menuItems: _buildContextMenuItems(),
-                      settings: ContextMenuSettings(
-                        hideDefaultSystemContextMenuItems: true,
-                      ),
-                    ),
+                    suppressNativeContextMenu: true,
                     onChaptersLoaded: (chapters) {
                       setState(() {
                         isLoading = false;
@@ -407,20 +423,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                     onAnnotationClicked: (cfi) {
                       print("Annotation clicked: $cfi");
-                      
+
                       // Debounce: prevent duplicate clicks within 300ms
                       final now = DateTime.now();
                       if (_lastClickedCfi == cfi && _lastClickTime != null) {
-                        final diff = now.difference(_lastClickTime!).inMilliseconds;
+                        final diff =
+                            now.difference(_lastClickTime!).inMilliseconds;
                         if (diff < 300) {
                           print("Debounced duplicate click (${diff}ms)");
                           return;
                         }
                       }
-                      
+
                       _lastClickedCfi = cfi;
                       _lastClickTime = now;
-                      
+
                       // Check if this CFI has notes
                       if (annotationManager.hasNotes(cfi)) {
                         _showNotesListDialog(cfi);
@@ -441,12 +458,55 @@ class _MyHomePageState extends State<MyHomePage> {
                     onSelection:
                         (selectedText, cfiRange, selectionRect, viewRect) {
                       print("On selection changes");
+                      print(
+                          "Selection rect from webview (already in pixels): $selectionRect");
+                      print("ViewRect: $viewRect");
+
+                      // Update state
+                      textSelectionCfi = cfiRange;
+                      this.selectedText = selectedText;
+
+                      // selectionRect is already in WebView pixel coordinates,
+                      // but we need to convert it to screen coordinates by finding
+                      // the WebView's position on screen
+
+                      // Use post frame callback to ensure we have the correct context
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        try {
+                          // selectionRect is in WebView coordinates, no need to multiply again
+                          print("Using selection rect: $selectionRect");
+
+                          // Initialize context menu if not already done
+                          _contextMenu ??= SelectionContextMenu(context);
+
+                          // Show the context menu
+                          final hasHighlight =
+                              annotationManager.hasHighlight(cfiRange);
+                          _contextMenu!.show(
+                            selectionRect:
+                                selectionRect, // Already in pixel coordinates
+                            hasHighlight: hasHighlight,
+                            onHighlight: _addHighlightAnnotation,
+                            onRemoveHighlight: _removeHighlightAnnotation,
+                            onAddNote: _addNoteAnnotation,
+                            onCopy: _copyToClipboard,
+                            onSearch: _searchSelectedText,
+                            onListen: _listenToSelectedText,
+                            onReport: _reportError,
+                          );
+                        } catch (e) {
+                          print("Error showing context menu: $e");
+                        }
+                      });
                     },
                     onDeselection: () {
                       print("on deselection");
+                      _contextMenu?.hide();
                     },
                     onSelectionChanging: () {
                       print("on selection changing");
+                      // Hide menu while selection is changing (user dragging handles)
+                      _contextMenu?.hide();
                     },
                   ),
                   Visibility(
