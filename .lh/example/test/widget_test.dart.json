@@ -1,0 +1,26 @@
+{
+    "sourceFile": "example/test/widget_test.dart",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1762656218097,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1762656226348,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -7,9 +7,9 @@\n \n import 'package:flutter/material.dart';\n import 'package:flutter_test/flutter_test.dart';\n \n-import 'main.dart';\n+import '../main.dart';\n \n void main() {\n   testWidgets('Counter increments smoke test', (WidgetTester tester) async {\n     // Build our app and trigger a frame.\n"
+                },
+                {
+                    "date": 1762656236288,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,30 @@\n+// This is a basic Flutter widget test.\n+//\n+// To perform an interaction with a widget in your test, use the WidgetTester\n+// utility in the flutter_test package. For example, you can send tap and scroll\n+// gestures. You can also use WidgetTester to find child widgets in the widget\n+// tree, read text, and verify that the values of widget properties are correct.\n+\n+import 'package:flutter/material.dart';\n+import 'package:flutter_test/flutter_test.dart';\n+\n+import '../lib/main.dart';\n+\n+void main() {\n+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {\n+    // Build our app and trigger a frame.\n+    await tester.pumpWidget(const MyApp());\n+\n+    // Verify that our counter starts at 0.\n+    expect(find.text('0'), findsOneWidget);\n+    expect(find.text('1'), findsNothing);\n+\n+    // Tap the '+' icon and trigger a frame.\n+    await tester.tap(find.byIcon(Icons.add));\n+    await tester.pump();\n+\n+    // Verify that our counter has incremented.\n+    expect(find.text('0'), findsNothing);\n+    expect(find.text('1'), findsOneWidget);\n+  });\n+}\n"
+                }
+            ],
+            "date": 1762656218097,
+            "name": "Commit-0",
+            "content": "// This is a basic Flutter widget test.\n//\n// To perform an interaction with a widget in your test, use the WidgetTester\n// utility in the flutter_test package. For example, you can send tap and scroll\n// gestures. You can also use WidgetTester to find child widgets in the widget\n// tree, read text, and verify that the values of widget properties are correct.\n\nimport 'package:flutter/material.dart';\nimport 'package:flutter_test/flutter_test.dart';\n\nimport 'main.dart';\n\nvoid main() {\n  testWidgets('Counter increments smoke test', (WidgetTester tester) async {\n    // Build our app and trigger a frame.\n    await tester.pumpWidget(const MyApp());\n\n    // Verify that our counter starts at 0.\n    expect(find.text('0'), findsOneWidget);\n    expect(find.text('1'), findsNothing);\n\n    // Tap the '+' icon and trigger a frame.\n    await tester.tap(find.byIcon(Icons.add));\n    await tester.pump();\n\n    // Verify that our counter has incremented.\n    expect(find.text('0'), findsNothing);\n    expect(find.text('1'), findsOneWidget);\n  });\n}\n"
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "sourceFile": "example/lib/annotation_manager.dart",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1762661473778,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1762662314671,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -11,8 +11,9 @@\n   List<AppAnnotation> get annotations => List.unmodifiable(_annotations);\n \n   Future<void> init() async {\n     _prefs = await SharedPreferences.getInstance();\n+    await clearAll();\n     await loadAnnotations();\n   }\n \n   // Load annotations from storage\n"
+                },
+                {
+                    "date": 1762662495282,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -11,9 +11,8 @@\n   List<AppAnnotation> get annotations => List.unmodifiable(_annotations);\n \n   Future<void> init() async {\n     _prefs = await SharedPreferences.getInstance();\n-    await clearAll();\n     await loadAnnotations();\n   }\n \n   // Load annotations from storage\n"
+                }
+            ],
+            "date": 1762661473778,
+            "name": "Commit-0",
+            "content": "import 'package:flutter/material.dart';\nimport 'package:shared_preferences/shared_preferences.dart';\n\nimport 'app_annotation.dart';\n\nclass AnnotationManager extends ChangeNotifier {\n  static const String _storageKey = 'epub_annotations';\n  List<AppAnnotation> _annotations = [];\n  SharedPreferences? _prefs;\n\n  List<AppAnnotation> get annotations => List.unmodifiable(_annotations);\n\n  Future<void> init() async {\n    _prefs = await SharedPreferences.getInstance();\n    await loadAnnotations();\n  }\n\n  // Load annotations from storage\n  Future<void> loadAnnotations() async {\n    final jsonString = _prefs?.getString(_storageKey) ?? '';\n    if (jsonString.isNotEmpty) {\n      _annotations = AnnotationSerializer.decodeList(jsonString);\n      notifyListeners();\n    }\n  }\n\n  // Save annotations to storage\n  Future<void> saveAnnotations() async {\n    final jsonString = AnnotationSerializer.encodeList(_annotations);\n    await _prefs?.setString(_storageKey, jsonString);\n  }\n\n  // Add a new annotation\n  Future<void> addAnnotation(AppAnnotation annotation) async {\n    _annotations.add(annotation);\n    notifyListeners();\n    await saveAnnotations();\n  }\n\n  // Remove annotation by ID\n  Future<void> removeAnnotation(String id) async {\n    _annotations.removeWhere((a) => a.id == id);\n    notifyListeners();\n    await saveAnnotations();\n  }\n\n  // Remove all annotations with specific CFI and type\n  Future<void> removeAnnotationsByCfi(\n    String cfi, {\n    AnnotationType? type,\n  }) async {\n    if (type != null) {\n      _annotations.removeWhere((a) => a.cfi == cfi && a.type == type);\n    } else {\n      _annotations.removeWhere((a) => a.cfi == cfi);\n    }\n    notifyListeners();\n    await saveAnnotations();\n  }\n\n  // Get all annotations for a specific CFI\n  List<AppAnnotation> getAnnotationsByCfi(String cfi) {\n    return _annotations.where((a) => a.cfi == cfi).toList();\n  }\n\n  // Check if a CFI has highlight\n  bool hasHighlight(String cfi) {\n    return _annotations.any(\n      (a) => a.cfi == cfi && a.type == AnnotationType.highlight,\n    );\n  }\n\n  // Check if a CFI has notes\n  bool hasNotes(String cfi) {\n    return _annotations.any(\n      (a) => a.cfi == cfi && a.myNote != null && a.myNote!.isNotEmpty,\n    );\n  }\n\n  // Get all notes for a CFI\n  List<AppAnnotation> getNotesByCfi(String cfi) {\n    return _annotations\n        .where((a) => a.cfi == cfi && a.myNote != null && a.myNote!.isNotEmpty)\n        .toList();\n  }\n\n  // Clear all annotations\n  Future<void> clearAll() async {\n    _annotations.clear();\n    notifyListeners();\n    await saveAnnotations();\n  }\n}\n"
+        }
+    ]
+}
