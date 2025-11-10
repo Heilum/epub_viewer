@@ -348,7 +348,9 @@ class _EpubViewerState extends State<EpubViewer> {
     String manager = displaySettings.manager.name;
     String flow = displaySettings.flow.name;
     String spread = displaySettings.spread.name;
-    bool snap = displaySettings.snap;
+    String axis = displaySettings.axis.name;
+    // Snap only works in paginated mode, force false for scrolled mode
+    bool snap = flow == 'paginated' ? displaySettings.snap : false;
     bool allowScripted = displaySettings.allowScriptedContent;
     String cfi = widget.initialCfi ?? "";
     String direction =
@@ -365,8 +367,8 @@ class _EpubViewerState extends State<EpubViewer> {
     bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
 
     webViewController?.evaluateJavascript(
-      source:
-          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${null}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange)',
+          source:
+          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${null}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis")',
     );
   }
 

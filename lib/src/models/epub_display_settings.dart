@@ -33,6 +33,9 @@ class EpubDisplaySettings {
   /// Theme of the reader, by default it uses the book theme
   final EpubTheme? theme;
 
+  /// Pagination axis (horizontal or vertical)
+  final EpubAxis axis;
+
   EpubDisplaySettings({
     this.fontSize = 15,
     this.spread = EpubSpread.auto,
@@ -43,6 +46,7 @@ class EpubDisplaySettings {
     this.useSnapAnimationAndroid = false,
     this.manager = EpubManager.continuous,
     this.theme,
+    this.axis = EpubAxis.horizontal,
   });
   factory EpubDisplaySettings.fromJson(Map<String, dynamic> json) =>
       _$EpubDisplaySettingsFromJson(json);
@@ -73,4 +77,12 @@ enum EpubDefaultDirection { ltr, rtl }
 enum EpubManager {
   continuous,
   // epub
+}
+
+enum EpubAxis {
+  /// Horizontal pagination (left-right swipe)
+  horizontal,
+  
+  /// Vertical pagination (up-down swipe)
+  vertical,
 }

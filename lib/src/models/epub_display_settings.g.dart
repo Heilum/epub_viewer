@@ -31,6 +31,9 @@ EpubDisplaySettings _$EpubDisplaySettingsFromJson(Map<String, dynamic> json) =>
       theme: json['theme'] == null
           ? null
           : EpubTheme.fromJson(json['theme'] as Map<String, dynamic>),
+      axis:
+          $enumDecodeNullable(_$EpubAxisEnumMap, json['axis']) ??
+          EpubAxis.horizontal,
     );
 
 Map<String, dynamic> _$EpubDisplaySettingsToJson(
@@ -45,6 +48,7 @@ Map<String, dynamic> _$EpubDisplaySettingsToJson(
   'snap': instance.snap,
   'useSnapAnimationAndroid': instance.useSnapAnimationAndroid,
   'theme': ?instance.theme?.toJson(),
+  'axis': _$EpubAxisEnumMap[instance.axis]!,
 };
 
 const _$EpubSpreadEnumMap = {
@@ -64,3 +68,8 @@ const _$EpubDefaultDirectionEnumMap = {
 };
 
 const _$EpubManagerEnumMap = {EpubManager.continuous: 'continuous'};
+
+const _$EpubAxisEnumMap = {
+  EpubAxis.horizontal: 'horizontal',
+  EpubAxis.vertical: 'vertical',
+};

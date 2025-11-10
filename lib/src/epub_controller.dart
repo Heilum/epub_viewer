@@ -141,9 +141,21 @@ class EpubController {
   }
 
   ///Adds a mark annotation
-  // addMark({required String cfi}) {
+  // addMark({
+  //   ///Cfi string of the desired location
+  //   required String cfi,
+  //
+  //   ///Color of the mark underline
+  //   Color color = Colors.red,
+  //
+  //   ///Whether to use dashed line style
+  //   bool isDashed = true,
+  // }) {
   //   checkEpubLoaded();
-  //   webViewController?.evaluateJavascript(source: 'addMark("$cfi")');
+  //   var colorHex = color.toHex();
+  //   webViewController?.evaluateJavascript(
+  //     source: 'addMark("$cfi", "$colorHex", $isDashed)',
+  //   );
   // }
 
   ///Removes a highlight from epub viewer
