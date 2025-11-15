@@ -210,6 +210,15 @@ class EpubController {
     );
   }
 
+  ///Programmatically clear any current text selection inside the EPUB WebView.
+  ///
+  ///This calls the global `clearSelection()` function defined in `epubView.js`,
+  ///which removes selection in all content iframes and notifies Flutter via
+  ///the existing `selectionCleared` handler.
+  clearSelection() async {
+    await webViewController?.evaluateJavascript(source: 'clearSelection()');
+  }
+
   updateTheme({required EpubTheme theme}) async {
     String? foregroundColor = theme.foregroundColor?.toHex();
     await webViewController?.evaluateJavascript(
