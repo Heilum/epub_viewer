@@ -18,12 +18,13 @@ import 'utils.dart';
 /// * [cfiRange] - The EPUB CFI (Canonical Fragment Identifier) range for the selection
 /// * [selectionRect] - The bounding rectangle of the selected text (WebView-relative)
 /// * [viewRect] - The bounding rectangle of the entire WebView
-typedef EpubSelectionCallback = void Function(
-  String selectedText,
-  String cfiRange,
-  Rect selectionRect,
-  Rect viewRect,
-);
+typedef EpubSelectionCallback =
+    void Function(
+      String selectedText,
+      String cfiRange,
+      Rect selectionRect,
+      Rect viewRect,
+    );
 
 class EpubViewer extends StatefulWidget {
   const EpubViewer({
@@ -88,25 +89,25 @@ class EpubViewer extends StatefulWidget {
   final bool suppressNativeContextMenu;
 
   /// Callback when text is selected with WebView-relative coordinates.
-  /// 
+  ///
   /// Fires when:
   /// * User completes initial text selection
   /// * User finishes dragging selection handles (after a 300ms debounce)
-  /// 
+  ///
   /// Use this callback to display custom UI at the selection position.
   /// Coordinates are relative to the WebView, not the screen.
-  /// 
+  ///
   /// See also:
   /// * [onSelectionChanging] - Called while user is actively dragging handles
   /// * [onDeselection] - Called when selection is cleared
   final EpubSelectionCallback? onSelection;
 
   /// Callback fired continuously while the user is dragging selection handles.
-  /// 
+  ///
   /// This callback helps prevent UI flicker and performance issues by allowing you to
   /// hide custom selection UI while the user is actively adjusting the selection.
   /// Once dragging stops, [onSelection] will be called with the final selection.
-  /// 
+  ///
   /// Typical usage:
   /// ```dart
   /// onSelectionChanging: () {
@@ -114,23 +115,23 @@ class EpubViewer extends StatefulWidget {
   ///   setState(() => showSelectionMenu = false);
   /// }
   /// ```
-  /// 
+  ///
   /// See also:
   /// * [onSelection] - Called when selection is finalized
   final VoidCallback? onSelectionChanging;
 
   /// Callback when text selection is cleared.
-  /// 
+  ///
   /// Fired when the user taps elsewhere or explicitly clears the selection.
   /// Use this to hide any custom selection UI.
   final VoidCallback? onDeselection;
 
   /// Whether to automatically clear text selection when navigating to a new page.
-  /// 
+  ///
   /// When true (default), text selection will be cleared when the user navigates
   /// to a different page using next(), previous(), or toCfi(). This is the standard
   /// behavior in most e-reader applications.
-  /// 
+  ///
   /// Set to false if you want to preserve selection across page changes, though
   /// note that the selection may not be visible on the new page.
   final bool clearSelectionOnPageChange;
@@ -166,54 +167,93 @@ class _EpubViewerState extends State<EpubViewer> {
     super.initState();
   }
 
+  /// Build gesture recognizers for the underlying [InAppWebView].
+  ///
+  /// - 在滚动模式或垂直分页时，允许垂直拖动（向上/向下滑动）。
+  /// - 在分页 + 横向轴时，允许水平拖动（左右翻页）。
+  /// - 始终允许长按，用于文本选择等长按行为。
+  Set<Factory<OneSequenceGestureRecognizer>> _buildGestureRecognizers() {
+    final displaySettings = widget.displaySettings ?? EpubDisplaySettings();
+    final flow = displaySettings.flow;
+    final axis = displaySettings.axis;
+
+    final recognizers = <Factory<OneSequenceGestureRecognizer>>{
+      Factory<LongPressGestureRecognizer>(
+        () => LongPressGestureRecognizer(
+          duration: const Duration(milliseconds: 30),
+        ),
+      ),
+    };
+
+    // 垂直滚动或垂直分页：需要纵向拖动交给 WebView
+    if (flow == EpubFlow.scrolled || axis == EpubAxis.vertical) {
+      recognizers.add(
+        Factory<VerticalDragGestureRecognizer>(
+          () => VerticalDragGestureRecognizer(),
+        ),
+      );
+
+      debugPrint('允许纵向拖动 added');
+    }
+
+    // 分页 + 横向轴：需要左右滑动交给 WebView 做翻页
+    if (flow == EpubFlow.paginated && axis == EpubAxis.horizontal) {
+      recognizers.add(
+        Factory<HorizontalDragGestureRecognizer>(
+          () => HorizontalDragGestureRecognizer(),
+        ),
+      );
+      debugPrint('允许横向拖动 added');
+    }
+
+    return recognizers;
+  }
+
   void _handleSelection({
     required Map<String, dynamic>? rect,
     required String selectedText,
     required String cfi,
   }) {
     if (!mounted) return;
-    
+
     try {
       final renderBox = context.findRenderObject() as RenderBox;
       final webViewSize = renderBox.size;
-      
+
       if (rect == null) {
         // Still call onTextSelected for basic selection functionality
         widget.onTextSelected?.call(
-          EpubTextSelection(
-            selectedText: selectedText,
-            selectionCfi: cfi,
-          ),
+          EpubTextSelection(selectedText: selectedText, selectionCfi: cfi),
         );
         return;
       }
-      
+
       // Convert relative coordinates (0-1) to actual WebView coordinates
       final left = (rect['left'] as num).toDouble();
       final top = (rect['top'] as num).toDouble();
       final width = (rect['width'] as num).toDouble();
       final height = (rect['height'] as num).toDouble();
-      
+
       final scaledRect = Rect.fromLTWH(
         left * webViewSize.width,
         top * webViewSize.height,
         width * webViewSize.width,
         height * webViewSize.height,
       );
-      
+
       // Create viewRect in WebView-relative coordinates
       final viewRect = Rect.fromLTWH(
         0,
         0,
         webViewSize.width,
-        webViewSize.height
+        webViewSize.height,
       );
 
       // Provide WebView-relative coordinates (not screen coordinates)
       widget.onSelection?.call(
         selectedText,
         cfi,
-        scaledRect,  // WebView-relative coordinates
+        scaledRect, // WebView-relative coordinates
         viewRect,
       );
     } catch (e) {
@@ -245,7 +285,7 @@ class _EpubViewerState extends State<EpubViewer> {
         final cfiString = data[0] as String;
         final selectedText = data[1] as String;
         Map<String, dynamic>? rect;
-        
+
         try {
           if (data.length > 2 && data[2] != null) {
             rect = Map<String, dynamic>.from(data[2] as Map);
@@ -267,7 +307,11 @@ class _EpubViewerState extends State<EpubViewer> {
 
         // If we have coordinates and a selection callback, provide full selection info
         if (rect != null && widget.onSelection != null) {
-          _handleSelection(rect: rect, selectedText: selectedText, cfi: cfiString);
+          _handleSelection(
+            rect: rect,
+            selectedText: selectedText,
+            cfi: cfiString,
+          );
         }
       },
     );
@@ -358,16 +402,29 @@ class _EpubViewerState extends State<EpubViewer> {
         EpubDefaultDirection.ltr.name;
     int fontSize = displaySettings.fontSize;
 
-    bool useCustomSwipe =
-        Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
+    // Enable custom swipe handling when:
+    // - Using paginated flow with horizontal axis (typical ebook reading),
+    //   so左右滑动能触发翻页；并且不依赖平台，iOS 也开启。
+    // - Or on Android when snap animation is disabled (保持原有行为).
+    final isPaginatedHorizontal =
+        displaySettings.flow == EpubFlow.paginated &&
+        displaySettings.axis == EpubAxis.horizontal;
+
+    bool useCustomSwipe;
+    if (isPaginatedHorizontal) {
+      useCustomSwipe = true;
+    } else {
+      useCustomSwipe =
+          Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
+    }
 
     String? foregroundColor = widget.displaySettings?.theme?.foregroundColor
         ?.toHex();
-    
+
     bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
 
     webViewController?.evaluateJavascript(
-          source:
+      source:
           'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${null}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis")',
     );
   }
@@ -377,7 +434,7 @@ class _EpubViewerState extends State<EpubViewer> {
     return Container(
       decoration: widget.displaySettings?.theme?.backgroundDecoration,
       child: InAppWebView(
-        contextMenu: widget.suppressNativeContextMenu 
+        contextMenu: widget.suppressNativeContextMenu
             ? ContextMenu(
                 menuItems: [],
                 settings: ContextMenuSettings(
@@ -417,16 +474,7 @@ class _EpubViewerState extends State<EpubViewer> {
             debugPrint("JS_LOG: ${consoleMessage.message}");
           }
         },
-        gestureRecognizers: {
-          Factory<VerticalDragGestureRecognizer>(
-            () => VerticalDragGestureRecognizer(),
-          ),
-          Factory<LongPressGestureRecognizer>(
-            () => LongPressGestureRecognizer(
-              duration: const Duration(milliseconds: 30),
-            ),
-          ),
-        },
+        gestureRecognizers: _buildGestureRecognizers(),
       ),
     );
   }
