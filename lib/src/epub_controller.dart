@@ -200,6 +200,16 @@ class EpubController {
     );
   }
 
+  ///Enable or disable swipe/page-turn in the underlying JS viewer.
+  ///
+  ///This uses the global `setSwipeEnabled` function defined in `epubView.js`
+  ///to guard both custom swipe detection and `rendition.next/prev`.
+  setSwipeEnabled({required bool enabled}) async {
+    await webViewController?.evaluateJavascript(
+      source: 'setSwipeEnabled(${enabled ? 'true' : 'false'})',
+    );
+  }
+
   updateTheme({required EpubTheme theme}) async {
     String? foregroundColor = theme.foregroundColor?.toHex();
     await webViewController?.evaluateJavascript(

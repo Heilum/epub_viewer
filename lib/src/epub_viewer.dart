@@ -197,14 +197,14 @@ class _EpubViewerState extends State<EpubViewer> {
     }
 
     // 分页 + 横向轴：需要左右滑动交给 WebView 做翻页
-    if (flow == EpubFlow.paginated && axis == EpubAxis.horizontal) {
-      recognizers.add(
-        Factory<HorizontalDragGestureRecognizer>(
-          () => HorizontalDragGestureRecognizer(),
-        ),
-      );
-      debugPrint('允许横向拖动 added');
-    }
+    // if (flow == EpubFlow.paginated && axis == EpubAxis.horizontal) {
+    //   recognizers.add(
+    //     Factory<HorizontalDragGestureRecognizer>(
+    //       () => HorizontalDragGestureRecognizer(),
+    //     ),
+    //   );
+    //   debugPrint('允许横向拖动 added');
+    // }
 
     return recognizers;
   }
@@ -393,8 +393,9 @@ class _EpubViewerState extends State<EpubViewer> {
     String flow = displaySettings.flow.name;
     String spread = displaySettings.spread.name;
     String axis = displaySettings.axis.name;
-    // Snap only works in paginated mode, force false for scrolled mode
-    bool snap = flow == 'paginated' ? displaySettings.snap : false;
+    // 保持与原始 flutter_epub_viewer 一致：直接使用 displaySettings.snap
+    //（在 paginated 模式下用于分页动画，在 scrolled 模式下无实际效果）
+    bool snap = displaySettings.snap;
     bool allowScripted = displaySettings.allowScriptedContent;
     String cfi = widget.initialCfi ?? "";
     String direction =
@@ -402,21 +403,10 @@ class _EpubViewerState extends State<EpubViewer> {
         EpubDefaultDirection.ltr.name;
     int fontSize = displaySettings.fontSize;
 
-    // Enable custom swipe handling when:
-    // - Using paginated flow with horizontal axis (typical ebook reading),
-    //   so左右滑动能触发翻页；并且不依赖平台，iOS 也开启。
-    // - Or on Android when snap animation is disabled (保持原有行为).
-    final isPaginatedHorizontal =
-        displaySettings.flow == EpubFlow.paginated &&
-        displaySettings.axis == EpubAxis.horizontal;
-
-    bool useCustomSwipe;
-    if (isPaginatedHorizontal) {
-      useCustomSwipe = true;
-    } else {
-      useCustomSwipe =
-          Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
-    }
+    // 与原始仓库保持一致：
+    // 仅在 Android 且未启用 snap 动画时使用自定义 swipe，iOS 依赖 epub.js 自带的分页动画。
+    bool useCustomSwipe =
+        Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
 
     String? foregroundColor = widget.displaySettings?.theme?.foregroundColor
         ?.toHex();
