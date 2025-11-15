@@ -19,12 +19,7 @@ import 'utils.dart';
 /// * [selectionRect] - The bounding rectangle of the selected text (WebView-relative)
 /// * [viewRect] - The bounding rectangle of the entire WebView
 typedef EpubSelectionCallback =
-    void Function(
-      String selectedText,
-      String cfiRange,
-      Rect selectionRect,
-      Rect viewRect,
-    );
+    void Function(String selectedText, String cfiRange, Rect selectionRect);
 
 class EpubViewer extends StatefulWidget {
   const EpubViewer({
@@ -36,11 +31,12 @@ class EpubViewer extends StatefulWidget {
     this.onEpubLoaded,
     this.onLocationLoaded,
     this.onRelocated,
-    this.onTextSelected,
+    //this.onTextSelected,
     this.displaySettings,
     this.selectionContextMenu,
     this.onAnnotationClicked,
-    this.onSelection,
+    this.onSelectionEnd,
+    this.onSelectionStart,
     this.onSelectionChanging,
     this.onDeselection,
     this.suppressNativeContextMenu = false,
@@ -71,7 +67,7 @@ class EpubViewer extends StatefulWidget {
   final ValueChanged<EpubLocation>? onRelocated;
 
   ///Call back when text selection changes
-  final ValueChanged<EpubTextSelection>? onTextSelected;
+  //final ValueChanged<EpubTextSelection>? onTextSelected;
 
   ///initial display settings
   final EpubDisplaySettings? displaySettings;
@@ -100,7 +96,7 @@ class EpubViewer extends StatefulWidget {
   /// See also:
   /// * [onSelectionChanging] - Called while user is actively dragging handles
   /// * [onDeselection] - Called when selection is cleared
-  final EpubSelectionCallback? onSelection;
+  final EpubSelectionCallback? onSelectionEnd;
 
   /// Callback fired continuously while the user is dragging selection handles.
   ///
@@ -119,6 +115,7 @@ class EpubViewer extends StatefulWidget {
   /// See also:
   /// * [onSelection] - Called when selection is finalized
   final VoidCallback? onSelectionChanging;
+  final VoidCallback? onSelectionStart;
 
   /// Callback when text selection is cleared.
   ///
@@ -209,7 +206,7 @@ class _EpubViewerState extends State<EpubViewer> {
     return recognizers;
   }
 
-  void _handleSelection({
+  void _handleSelectionEnd({
     required Map<String, dynamic>? rect,
     required String selectedText,
     required String cfi,
@@ -220,13 +217,7 @@ class _EpubViewerState extends State<EpubViewer> {
       final renderBox = context.findRenderObject() as RenderBox;
       final webViewSize = renderBox.size;
 
-      if (rect == null) {
-        // Still call onTextSelected for basic selection functionality
-        widget.onTextSelected?.call(
-          EpubTextSelection(selectedText: selectedText, selectionCfi: cfi),
-        );
-        return;
-      }
+      if (rect == null) return;
 
       // Convert relative coordinates (0-1) to actual WebView coordinates
       final left = (rect['left'] as num).toDouble();
@@ -241,20 +232,11 @@ class _EpubViewerState extends State<EpubViewer> {
         height * webViewSize.height,
       );
 
-      // Create viewRect in WebView-relative coordinates
-      final viewRect = Rect.fromLTWH(
-        0,
-        0,
-        webViewSize.width,
-        webViewSize.height,
-      );
-
       // Provide WebView-relative coordinates (not screen coordinates)
-      widget.onSelection?.call(
+      widget.onSelectionEnd?.call(
         selectedText,
         cfi,
         scaledRect, // WebView-relative coordinates
-        viewRect,
       );
     } catch (e) {
       if (kDebugMode) {
@@ -280,38 +262,9 @@ class _EpubViewerState extends State<EpubViewer> {
     );
 
     webViewController?.addJavaScriptHandler(
-      handlerName: "selection",
-      callback: (data) {
-        final cfiString = data[0] as String;
-        final selectedText = data[1] as String;
-        Map<String, dynamic>? rect;
-
-        try {
-          if (data.length > 2 && data[2] != null) {
-            rect = Map<String, dynamic>.from(data[2] as Map);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('Error parsing selection rect: $e');
-          }
-          rect = null;
-        }
-
-        // 最终选区：先通知 onSelection（带 rect），再触发一次 onTextSelected
-        if (rect != null && widget.onSelection != null) {
-          _handleSelection(
-            rect: rect,
-            selectedText: selectedText,
-            cfi: cfiString,
-          );
-        }
-
-        widget.onTextSelected?.call(
-          EpubTextSelection(
-            selectedText: selectedText,
-            selectionCfi: cfiString,
-          ),
-        );
+      handlerName: "seletionStart",
+      callback: (data) async {
+        widget.onSelectionStart?.call();
       },
     );
 
@@ -323,9 +276,16 @@ class _EpubViewerState extends State<EpubViewer> {
       },
     );
 
-    // Add selection changing handler (dragging handles, with full selection info)
     webViewController?.addJavaScriptHandler(
       handlerName: 'selectionChanging',
+      callback: (args) {
+        widget.onSelectionChanging?.call();
+      },
+    );
+
+    // Add selection changing handler (dragging handles, with full selection info)
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'selectionEnd',
       callback: (data) {
         final cfiString = data[0] as String;
         final selectedText = data[1] as String;
@@ -342,15 +302,13 @@ class _EpubViewerState extends State<EpubViewer> {
           rect = null;
         }
 
-        if (rect != null && widget.onSelection != null) {
-          _handleSelection(
+        if (rect != null && widget.onSelectionEnd != null) {
+          _handleSelectionEnd(
             rect: rect,
             selectedText: selectedText,
             cfi: cfiString,
           );
         }
-
-        widget.onSelectionChanging?.call();
       },
     );
 

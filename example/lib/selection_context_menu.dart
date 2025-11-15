@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 /// Custom context menu for text selection in EPUB viewer
@@ -144,7 +146,10 @@ class SelectionContextMenuWidget extends StatelessWidget {
     const estimatedMenuWidth = 480.0; // ~80px per item * 6 items
 
     // Calculate initial position (below and centered on selection)
-    double menuTop = selectionRect.bottom + 8;
+    double menuTop = max(selectionRect.bottom, selectionRect.top) + 8;
+    debugPrint('menuTop: $menuTop');
+    debugPrint('selectionRect.bottom: ${selectionRect.bottom}');
+    debugPrint('selectionRect.top: ${selectionRect.top}');
     double menuLeft = selectionRect.left +
         (selectionRect.width / 2) -
         (estimatedMenuWidth / 2);

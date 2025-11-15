@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 7,
+            "activePatchIndex": 11,
             "patches": [
                 {
                     "date": 1762672478354,
@@ -36,6 +36,22 @@
                 {
                     "date": 1762674046860,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -221,9 +221,11 @@\n                 const _MenuDivider(),\n \n                 // Highlight/Remove Highlight button\n                 _MenuItemButton(\n-                  icon: hasHighlight ? Icons.highlight_remove : Icons.format_underlined,\n+                  icon: hasHighlight\n+                      ? Icons.highlight_remove\n+                      : Icons.format_underlined,\n                   label: hasHighlight ? '删除划线' : '划线',\n                   onTap: hasHighlight ? onRemoveHighlight : onHighlight,\n                 ),\n                 const _MenuDivider(),\n"
+                },
+                {
+                    "date": 1763217734495,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -144,8 +144,9 @@\n     const estimatedMenuWidth = 480.0; // ~80px per item * 6 items\n \n     // Calculate initial position (below and centered on selection)\n     double menuTop = selectionRect.bottom + 8;\n+    debugPrint('menuTop: $menuTop');\n     double menuLeft = selectionRect.left +\n         (selectionRect.width / 2) -\n         (estimatedMenuWidth / 2);\n \n"
+                },
+                {
+                    "date": 1763217802040,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -143,9 +143,9 @@\n     const estimatedMenuHeight = 70.0; // Icon + text + padding\n     const estimatedMenuWidth = 480.0; // ~80px per item * 6 items\n \n     // Calculate initial position (below and centered on selection)\n-    double menuTop = selectionRect.bottom + 8;\n+    double menuTop = max(selectionRect.bottom,selectionRect.top) + 8;\n     debugPrint('menuTop: $menuTop');\n     double menuLeft = selectionRect.left +\n         (selectionRect.width / 2) -\n         (estimatedMenuWidth / 2);\n"
+                },
+                {
+                    "date": 1763217809417,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,4 +1,6 @@\n+import 'dart:math';\n+\n import 'package:flutter/material.dart';\n \n /// Custom context menu for text selection in EPUB viewer\n class SelectionContextMenu {\n"
+                },
+                {
+                    "date": 1763217867590,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -147,8 +147,10 @@\n \n     // Calculate initial position (below and centered on selection)\n     double menuTop = max(selectionRect.bottom, selectionRect.top) + 8;\n     debugPrint('menuTop: $menuTop');\n+    debugPrint('selectionRect.bottom: ${selectionRect.bottom}');\n+    debugPrint('selectionRect.top: ${selectionRect.top}');\n     double menuLeft = selectionRect.left +\n         (selectionRect.width / 2) -\n         (estimatedMenuWidth / 2);\n \n"
                 }
             ],
             "date": 1762672478354,

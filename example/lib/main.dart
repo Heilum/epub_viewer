@@ -445,22 +445,20 @@ class _MyHomePageState extends State<MyHomePage> {
                         print("No notes found for this annotation");
                       }
                     },
-                    onTextSelected: (epubTextSelection) {
-                      setState(() {
-                        textSelectionCfi = epubTextSelection.selectionCfi;
-                        selectedText = epubTextSelection.selectedText;
-                      });
-                      print('Selected: $textSelectionCfi');
+                    onSelectionStart: () {
+                      print('选择 开始');
+                    },
+                    onSelectionChanging: () {
+                      print('选择 改变');
                     },
                     onLocationLoaded: () {
                       print('on location loaded');
                     },
-                    onSelection:
-                        (selectedText, cfiRange, selectionRect, viewRect) {
-                      print("On selection changes");
+                    onSelectionEnd: (selectedText, cfiRange, selectionRect) {
+                      print(
+                          "选择 结束, selectedText: $selectedText, cfiRange: $cfiRange, selectionRect: $selectionRect");
                       print(
                           "Selection rect from webview (already in pixels): $selectionRect");
-                      print("ViewRect: $viewRect");
 
                       // Update state
                       textSelectionCfi = cfiRange;
@@ -470,42 +468,34 @@ class _MyHomePageState extends State<MyHomePage> {
                       // but we need to convert it to screen coordinates by finding
                       // the WebView's position on screen
 
-                      // Use post frame callback to ensure we have the correct context
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        try {
-                          // selectionRect is in WebView coordinates, no need to multiply again
-                          print("Using selection rect: $selectionRect");
+                      try {
+                        // selectionRect is in WebView coordinates, no need to multiply again
+                        print("Using selection rect: $selectionRect");
 
-                          // Initialize context menu if not already done
-                          _contextMenu ??= SelectionContextMenu(context);
+                        // Initialize context menu if not already done
+                        _contextMenu ??= SelectionContextMenu(context);
 
-                          // Show the context menu
-                          final hasHighlight =
-                              annotationManager.hasHighlight(cfiRange);
-                          _contextMenu!.show(
-                            selectionRect:
-                                selectionRect, // Already in pixel coordinates
-                            hasHighlight: hasHighlight,
-                            onHighlight: _addHighlightAnnotation,
-                            onRemoveHighlight: _removeHighlightAnnotation,
-                            onAddNote: _addNoteAnnotation,
-                            onCopy: _copyToClipboard,
-                            onSearch: _searchSelectedText,
-                            onListen: _listenToSelectedText,
-                            onReport: _reportError,
-                          );
-                        } catch (e) {
-                          print("Error showing context menu: $e");
-                        }
-                      });
+                        // Show the context menu
+                        final hasHighlight =
+                            annotationManager.hasHighlight(cfiRange);
+                        _contextMenu!.show(
+                          selectionRect:
+                              selectionRect, // Already in pixel coordinates
+                          hasHighlight: hasHighlight,
+                          onHighlight: _addHighlightAnnotation,
+                          onRemoveHighlight: _removeHighlightAnnotation,
+                          onAddNote: _addNoteAnnotation,
+                          onCopy: _copyToClipboard,
+                          onSearch: _searchSelectedText,
+                          onListen: _listenToSelectedText,
+                          onReport: _reportError,
+                        );
+                      } catch (e) {
+                        print("Error showing context menu: $e");
+                      }
                     },
                     onDeselection: () {
                       print("on deselection");
-                      _contextMenu?.hide();
-                    },
-                    onSelectionChanging: () {
-                      print("on selection changing");
-                      // Hide menu while selection is changing (user dragging handles)
                       _contextMenu?.hide();
                     },
                   ),

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 40,
+            "activePatchIndex": 45,
             "patches": [
                 {
                     "date": 1762656180806,
@@ -168,6 +168,26 @@
                 {
                     "date": 1762673998942,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -253,8 +253,47 @@\n       }\n     }\n   }\n \n+  // Search selected text\n+  void _searchSelectedText() {\n+    if (selectedText.isNotEmpty) {\n+      // TODO: Implement search functionality\n+      ScaffoldMessenger.of(context).showSnackBar(\n+        SnackBar(\n+          content: Text('查询: $selectedText'),\n+          duration: const Duration(seconds: 2),\n+        ),\n+      );\n+    }\n+  }\n+\n+  // Listen to selected text (text-to-speech)\n+  void _listenToSelectedText() {\n+    if (selectedText.isNotEmpty) {\n+      // TODO: Implement text-to-speech functionality\n+      ScaffoldMessenger.of(context).showSnackBar(\n+        SnackBar(\n+          content: Text('听当前: $selectedText'),\n+          duration: const Duration(seconds: 2),\n+        ),\n+      );\n+    }\n+  }\n+\n+  // Report error in selected text\n+  void _reportError() {\n+    if (selectedText.isNotEmpty) {\n+      // TODO: Implement error reporting functionality\n+      ScaffoldMessenger.of(context).showSnackBar(\n+        SnackBar(\n+          content: Text('纠错: $selectedText'),\n+          duration: const Duration(seconds: 2),\n+        ),\n+      );\n+    }\n+  }\n+\n   @override\n   Widget build(BuildContext context) {\n     return Scaffold(\n       drawer: ChapterDrawer(controller: epubController),\n@@ -450,8 +489,11 @@\n                             onHighlight: _addHighlightAnnotation,\n                             onRemoveHighlight: _removeHighlightAnnotation,\n                             onAddNote: _addNoteAnnotation,\n                             onCopy: _copyToClipboard,\n+                            onSearch: _searchSelectedText,\n+                            onListen: _listenToSelectedText,\n+                            onReport: _reportError,\n                           );\n                         } catch (e) {\n                           print(\"Error showing context menu: $e\");\n                         }\n"
+                },
+                {
+                    "date": 1763214249807,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -444,9 +444,9 @@\n                       } else {\n                         print(\"No notes found for this annotation\");\n                       }\n                     },\n-                    onTextSelected: (epubTextSelection) {\n+                    onSelectionEnd: (selectedText, cfiRange, selectionRect) {\n                       setState(() {\n                         textSelectionCfi = epubTextSelection.selectionCfi;\n                         selectedText = epubTextSelection.selectedText;\n                       });\n"
+                },
+                {
+                    "date": 1763214315773,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -454,9 +454,9 @@\n                     },\n                     onLocationLoaded: () {\n                       print('on location loaded');\n                     },\n-                    onSelection:\n+                    onSelectionEnd:\n                         (selectedText, cfiRange, selectionRect, viewRect) {\n                       print(\"On selection changes\");\n                       print(\n                           \"Selection rect from webview (already in pixels): $selectionRect\");\n"
+                },
+                {
+                    "date": 1763214327008,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -455,9 +455,9 @@\n                     onLocationLoaded: () {\n                       print('on location loaded');\n                     },\n                     onSelectionEnd:\n-                        (selectedText, cfiRange, selectionRect, viewRect) {\n+                        (selectedText, cfiRange, selectionRect) {\n                       print(\"On selection changes\");\n                       print(\n                           \"Selection rect from webview (already in pixels): $selectionRect\");\n                       print(\"ViewRect: $viewRect\");\n"
+                },
+                {
+                    "date": 1763214343506,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -444,14 +444,10 @@\n                       } else {\n                         print(\"No notes found for this annotation\");\n                       }\n                     },\n-                    onSelectionEnd: (selectedText, cfiRange, selectionRect) {\n-                      setState(() {\n-                        textSelectionCfi = cfiRange;\n-                        selectedText = selectedText;\n-                      });\n-                      print('Selected: $textSelectionCfi');\n+                    onSelectionStart: () {\n+                      print('Selection started');\n                     },\n                     onLocationLoaded: () {\n                       print('on location loaded');\n                     },\n"
+                },
+                {
+                    "date": 1763214349313,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -447,8 +447,11 @@\n                     },\n                     onSelectionStart: () {\n                       print('Selection started');\n                     },\n+                     onSelectionStart: () {\n+                      print('Selection started');\n+                    },\n                     onLocationLoaded: () {\n                       print('on location loaded');\n                     },\n                     onSelectionEnd: (selectedText, cfiRange, selectionRect) {\n"
                 }
             ],
             "date": 1762656180806,
