@@ -297,15 +297,7 @@ class _EpubViewerState extends State<EpubViewer> {
           rect = null;
         }
 
-        // Always call basic text selection callback
-        widget.onTextSelected?.call(
-          EpubTextSelection(
-            selectedText: selectedText,
-            selectionCfi: cfiString,
-          ),
-        );
-
-        // If we have coordinates and a selection callback, provide full selection info
+        // 最终选区：先通知 onSelection（带 rect），再触发一次 onTextSelected
         if (rect != null && widget.onSelection != null) {
           _handleSelection(
             rect: rect,
@@ -313,6 +305,13 @@ class _EpubViewerState extends State<EpubViewer> {
             cfi: cfiString,
           );
         }
+
+        widget.onTextSelected?.call(
+          EpubTextSelection(
+            selectedText: selectedText,
+            selectionCfi: cfiString,
+          ),
+        );
       },
     );
 
@@ -324,10 +323,33 @@ class _EpubViewerState extends State<EpubViewer> {
       },
     );
 
-    // Add selection changing handler (dragging handles)
+    // Add selection changing handler (dragging handles, with full selection info)
     webViewController?.addJavaScriptHandler(
       handlerName: 'selectionChanging',
-      callback: (args) {
+      callback: (data) {
+        final cfiString = data[0] as String;
+        final selectedText = data[1] as String;
+        Map<String, dynamic>? rect;
+
+        try {
+          if (data.length > 2 && data[2] != null) {
+            rect = Map<String, dynamic>.from(data[2] as Map);
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('Error parsing selectionChanging rect: $e');
+          }
+          rect = null;
+        }
+
+        if (rect != null && widget.onSelection != null) {
+          _handleSelection(
+            rect: rect,
+            selectedText: selectedText,
+            cfi: cfiString,
+          );
+        }
+
         widget.onSelectionChanging?.call();
       },
     );
