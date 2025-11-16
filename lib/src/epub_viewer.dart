@@ -41,6 +41,8 @@ class EpubViewer extends StatefulWidget {
     this.onDeselection,
     this.suppressNativeContextMenu = false,
     this.clearSelectionOnPageChange = true,
+    this.onSwipe,
+    this.onScroll,
   });
 
   //Epub controller to manage epub
@@ -83,6 +85,18 @@ class EpubViewer extends StatefulWidget {
   /// When true, no native context menu will be shown on text selection.
   /// Use with [onSelection] to implement custom selection UI.
   final bool suppressNativeContextMenu;
+
+  final Function(String direction)? onSwipe;
+
+  /// Callback when epub scrolls
+  ///
+  /// Only meaningful in scrolled flows. Provides the current vertical scroll
+  /// position, the maximum scroll offset, and a direction string:
+  /// - 'down'  : user scrolled towards the end of the document
+  /// - 'up'    : user scrolled towards the beginning
+  /// - 'none'  : scrollTop did not change since last event
+  final void Function(double scrollTop, double maxScrollTop, String direction)?
+  onScroll;
 
   /// Callback when text is selected with WebView-relative coordinates.
   ///
@@ -283,6 +297,18 @@ class _EpubViewerState extends State<EpubViewer> {
       },
     );
 
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'swipe',
+      callback: (args) {
+        // JS 里传的是一个对象，这里取 args[0]
+        //final payload = Map<String, dynamic>.from(args[0] as Map);
+        final direction = args[0];
+
+        // 暴露给外部（EpubViewer/EpubController）的回调
+        widget.onSwipe?.call(direction);
+      },
+    );
+
     // Add selection changing handler (dragging handles, with full selection info)
     webViewController?.addJavaScriptHandler(
       handlerName: 'selectionEnd',
@@ -364,6 +390,27 @@ class _EpubViewerState extends State<EpubViewer> {
         );
       },
     );
+
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'epubScroll',
+      callback: (args) {
+        if (widget.onScroll == null || args.isEmpty) {
+          return;
+        }
+
+        final raw = args[0];
+        if (raw is! Map) {
+          return;
+        }
+
+        final payload = Map<String, dynamic>.from(raw as Map);
+        final scrollTop = (payload['scrollTop'] as num).toDouble();
+        final maxScrollTop = (payload['maxScrollTop'] as num).toDouble();
+        final direction = payload['direction'] as String? ?? 'none';
+
+        widget.onScroll?.call(scrollTop, maxScrollTop, direction);
+      },
+    );
   }
 
   Future<void> loadBook() async {
@@ -385,8 +432,8 @@ class _EpubViewerState extends State<EpubViewer> {
 
     // 与原始仓库保持一致：
     // 仅在 Android 且未启用 snap 动画时使用自定义 swipe，iOS 依赖 epub.js 自带的分页动画。
-    bool useCustomSwipe =
-        Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
+    bool useCustomSwipe = false;
+    //  Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
 
     String? foregroundColor = widget.displaySettings?.theme?.foregroundColor
         ?.toHex();
