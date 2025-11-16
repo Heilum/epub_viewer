@@ -445,16 +445,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         print("No notes found for this annotation");
                       }
                     },
-                    onSelectionStart: () {
-                      print('选择 开始');
-                    },
-                    onSelectionChanging: () {
-                      print('选择 改变');
-                    },
                     onLocationLoaded: () {
                       print('on location loaded');
                     },
-                    onSelectionEnd: (selectedText, cfiRange, selectionRect) {
+                    onSelectionChanging:
+                        (selectedText, cfiRange, selectionRect) {
                       print(
                           "选择 结束, selectedText: $selectedText, cfiRange: $cfiRange, selectionRect: $selectionRect");
                       print(

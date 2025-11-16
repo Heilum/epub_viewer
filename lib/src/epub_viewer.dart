@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -35,8 +33,7 @@ class EpubViewer extends StatefulWidget {
     this.displaySettings,
     this.selectionContextMenu,
     this.onAnnotationClicked,
-    this.onSelectionEnd,
-    this.onSelectionStart,
+
     this.onSelectionChanging,
     this.onDeselection,
     this.suppressNativeContextMenu = false,
@@ -110,7 +107,7 @@ class EpubViewer extends StatefulWidget {
   /// See also:
   /// * [onSelectionChanging] - Called while user is actively dragging handles
   /// * [onDeselection] - Called when selection is cleared
-  final EpubSelectionCallback? onSelectionEnd;
+  final EpubSelectionCallback? onSelectionChanging;
 
   /// Callback fired continuously while the user is dragging selection handles.
   ///
@@ -128,8 +125,6 @@ class EpubViewer extends StatefulWidget {
   ///
   /// See also:
   /// * [onSelection] - Called when selection is finalized
-  final VoidCallback? onSelectionChanging;
-  final VoidCallback? onSelectionStart;
 
   /// Callback when text selection is cleared.
   ///
@@ -207,20 +202,20 @@ class _EpubViewerState extends State<EpubViewer> {
       debugPrint('允许纵向拖动 added');
     }
 
-    // 分页 + 横向轴：需要左右滑动交给 WebView 做翻页
+    // 分页 + 横向轴：需要上下拖动选择文本
     // if (flow == EpubFlow.paginated && axis == EpubAxis.horizontal) {
     //   recognizers.add(
-    //     Factory<HorizontalDragGestureRecognizer>(
-    //       () => HorizontalDragGestureRecognizer(),
+    //     Factory<VerticalDragGestureRecognizer>(
+    //       () => VerticalDragGestureRecognizer(),
     //     ),
     //   );
-    //   debugPrint('允许横向拖动 added');
+    //   debugPrint('允许纵向拖动2 added');
     // }
 
     return recognizers;
   }
 
-  void _handleSelectionEnd({
+  void _handleSelectionChanging({
     required Map<String, dynamic>? rect,
     required String selectedText,
     required String cfi,
@@ -247,7 +242,7 @@ class _EpubViewerState extends State<EpubViewer> {
       );
 
       // Provide WebView-relative coordinates (not screen coordinates)
-      widget.onSelectionEnd?.call(
+      widget.onSelectionChanging?.call(
         selectedText,
         cfi,
         scaledRect, // WebView-relative coordinates
@@ -275,13 +270,6 @@ class _EpubViewerState extends State<EpubViewer> {
       },
     );
 
-    webViewController?.addJavaScriptHandler(
-      handlerName: "seletionStart",
-      callback: (data) async {
-        widget.onSelectionStart?.call();
-      },
-    );
-
     // Add deselection handler
     webViewController?.addJavaScriptHandler(
       handlerName: 'selectionCleared',
@@ -293,48 +281,14 @@ class _EpubViewerState extends State<EpubViewer> {
     webViewController?.addJavaScriptHandler(
       handlerName: 'selectionChanging',
       callback: (args) {
-        widget.onSelectionChanging?.call();
-      },
-    );
-
-    webViewController?.addJavaScriptHandler(
-      handlerName: 'swipe',
-      callback: (args) {
-        // JS 里传的是一个对象，这里取 args[0]
-        //final payload = Map<String, dynamic>.from(args[0] as Map);
-        final direction = args[0];
-
-        // 暴露给外部（EpubViewer/EpubController）的回调
-        widget.onSwipe?.call(direction);
-      },
-    );
-
-    // Add selection changing handler (dragging handles, with full selection info)
-    webViewController?.addJavaScriptHandler(
-      handlerName: 'selectionEnd',
-      callback: (data) {
-        final cfiString = data[0] as String;
-        final selectedText = data[1] as String;
-        Map<String, dynamic>? rect;
-
-        try {
-          if (data.length > 2 && data[2] != null) {
-            rect = Map<String, dynamic>.from(data[2] as Map);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('Error parsing selectionChanging rect: $e');
-          }
-          rect = null;
-        }
-
-        if (rect != null && widget.onSelectionEnd != null) {
-          _handleSelectionEnd(
-            rect: rect,
-            selectedText: selectedText,
-            cfi: cfiString,
-          );
-        }
+        final selectedText = args[0] as String;
+        final cfi = args[1] as String;
+        final rect = args[2] as Map<String, dynamic>;
+        _handleSelectionChanging(
+          selectedText: selectedText,
+          cfi: cfi,
+          rect: rect,
+        );
       },
     );
 
@@ -403,7 +357,7 @@ class _EpubViewerState extends State<EpubViewer> {
           return;
         }
 
-        final payload = Map<String, dynamic>.from(raw as Map);
+        final payload = Map<String, dynamic>.from(raw);
         final scrollTop = (payload['scrollTop'] as num).toDouble();
         final maxScrollTop = (payload['maxScrollTop'] as num).toDouble();
         final direction = payload['direction'] as String? ?? 'none';
