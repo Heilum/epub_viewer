@@ -383,6 +383,8 @@ class _EpubViewerState extends State<EpubViewer> {
         widget.displaySettings?.defaultDirection.name ??
         EpubDefaultDirection.ltr.name;
     int fontSize = displaySettings.fontSize;
+    String? fontFamily = displaySettings.fontFamily;
+    double? margin = displaySettings.horizontalMargin;
 
     // 与原始仓库保持一致：
     // 仅在 Android 且未启用 snap 动画时使用自定义 swipe，iOS 依赖 epub.js 自带的分页动画。
@@ -391,12 +393,17 @@ class _EpubViewerState extends State<EpubViewer> {
 
     String? foregroundColor = widget.displaySettings?.theme?.foregroundColor
         ?.toHex();
+    String? backgroundColor;
+    final decoration = widget.displaySettings?.theme?.backgroundDecoration;
+    if (decoration is BoxDecoration) {
+      backgroundColor = decoration.color?.toHex();
+    }
 
     bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
 
     webViewController?.evaluateJavascript(
       source:
-          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${null}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis")',
+          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${backgroundColor ?? ''}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis", ${fontFamily == null ? 'null' : '"$fontFamily"'}, ${margin ?? 'null'})',
     );
   }
 

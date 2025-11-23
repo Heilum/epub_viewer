@@ -36,6 +36,12 @@ class EpubDisplaySettings {
   /// Pagination axis (horizontal or vertical)
   final EpubAxis axis;
 
+  /// Font family of the reader
+  final String? fontFamily;
+
+  /// Horizontal margin of the reader
+  final double? horizontalMargin;
+
   EpubDisplaySettings({
     this.fontSize = 15,
     this.spread = EpubSpread.auto,
@@ -47,6 +53,8 @@ class EpubDisplaySettings {
     this.manager = EpubManager.continuous,
     this.theme,
     this.axis = EpubAxis.horizontal,
+    this.fontFamily,
+    this.horizontalMargin,
   });
   factory EpubDisplaySettings.fromJson(Map<String, dynamic> json) =>
       _$EpubDisplaySettingsFromJson(json);

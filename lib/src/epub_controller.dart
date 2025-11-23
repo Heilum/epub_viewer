@@ -200,6 +200,13 @@ class EpubController {
     );
   }
 
+  ///Set horizontal margin in epub viewer
+  setHorizontalMargin({required double margin}) async {
+    await webViewController?.evaluateJavascript(
+      source: 'setHorizontalMargin($margin)',
+    );
+  }
+
   ///Enable or disable swipe/page-turn in the underlying JS viewer.
   ///
   ///This uses the global `setSwipeEnabled` function defined in `epubView.js`
@@ -221,8 +228,16 @@ class EpubController {
 
   updateTheme({required EpubTheme theme}) async {
     String? foregroundColor = theme.foregroundColor?.toHex();
+    String backgroundColor = "";
+    final decoration = theme.backgroundDecoration;
+    if (decoration is BoxDecoration) {
+      final color = decoration.color;
+      if (color != null) {
+        backgroundColor = color.toHex();
+      }
+    }
     await webViewController?.evaluateJavascript(
-      source: 'updateTheme("","$foregroundColor")',
+      source: 'updateTheme("$backgroundColor","$foregroundColor")',
     );
   }
 
@@ -283,6 +298,50 @@ class EpubController {
       );
     }
   }
+
+  ///Set font family in epub viewer
+  setFontFamily({required EpubFontFamily fontFamily}) async {
+    await webViewController?.evaluateJavascript(
+      source: "setFontFamily('${fontFamily.cssValue}')",
+    );
+  }
+}
+
+enum EpubFontFamily {
+  systemDefault,
+  microsoftYaHei,
+  simSun,
+  monospace;
+
+  String get displayName {
+    switch (this) {
+      case EpubFontFamily.systemDefault:
+        return '系统默认';
+      case EpubFontFamily.microsoftYaHei:
+        return '微软雅黑';
+      case EpubFontFamily.simSun:
+        return '宋体';
+      case EpubFontFamily.monospace:
+        return '等宽字体';
+    }
+  }
+}
+
+extension EpubFontFamilyExtension on EpubFontFamily {
+  String get cssValue {
+    switch (this) {
+      case EpubFontFamily.systemDefault:
+        return '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif';
+      case EpubFontFamily.microsoftYaHei:
+        return '"Microsoft YaHei", "微软雅黑", "PingFang SC", "Heiti SC", "黑体", Arial, sans-serif';
+      case EpubFontFamily.simSun:
+        return '"SimSun", "5B8B4F53", "STSong", "华文宋体", Times, serif';
+      case EpubFontFamily.monospace:
+        return '"Courier New", Courier, monospace';
+    }
+  }
+
+  // ... 其他展示给用户的名称
 }
 
 class LocalServerController {
