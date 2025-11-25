@@ -33,15 +33,15 @@ EpubDisplaySettings _$EpubDisplaySettingsFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$EpubDisplaySettingsToJson(EpubDisplaySettings instance) {
   final val = <String, dynamic>{
-    'fontSize': instance.fontSize,
-    'spread': _$EpubSpreadEnumMap[instance.spread]!,
-    'flow': _$EpubFlowEnumMap[instance.flow]!,
+  'fontSize': instance.fontSize,
+  'spread': _$EpubSpreadEnumMap[instance.spread]!,
+  'flow': _$EpubFlowEnumMap[instance.flow]!,
     'defaultDirection':
         _$EpubDefaultDirectionEnumMap[instance.defaultDirection]!,
-    'allowScriptedContent': instance.allowScriptedContent,
-    'manager': _$EpubManagerEnumMap[instance.manager]!,
-    'snap': instance.snap,
-    'useSnapAnimationAndroid': instance.useSnapAnimationAndroid,
+  'allowScriptedContent': instance.allowScriptedContent,
+  'manager': _$EpubManagerEnumMap[instance.manager]!,
+  'snap': instance.snap,
+  'useSnapAnimationAndroid': instance.useSnapAnimationAndroid,
   };
 
   void writeNotNull(String key, dynamic value) {

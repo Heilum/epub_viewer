@@ -166,6 +166,8 @@ class _EpubViewerState extends State<EpubViewer> {
     verticalScrollBarEnabled: false,
     selectionGranularity: SelectionGranularity.CHARACTER,
     disableContextMenu: true, // Disable native context menu
+    allowFileAccessFromFileURLs: true,
+    allowUniversalAccessFromFileURLs: true,
   );
 
   @override

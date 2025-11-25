@@ -308,21 +308,18 @@ class EpubController {
 }
 
 enum EpubFontFamily {
-  systemDefault,
-  microsoftYaHei,
-  simSun,
-  monospace;
+  fangzhengyasong, //FZZHUNYSJW.TTF
+  fangzhengkaite, //FZKTJW.TTF
+  fangzhenglanting; //FZLanTYJW_Zhun.TTF
 
   String get displayName {
     switch (this) {
-      case EpubFontFamily.systemDefault:
-        return '系统默认';
-      case EpubFontFamily.microsoftYaHei:
-        return '微软雅黑';
-      case EpubFontFamily.simSun:
-        return '宋体';
-      case EpubFontFamily.monospace:
-        return '等宽字体';
+      case EpubFontFamily.fangzhengkaite:
+        return '方正楷体';
+      case EpubFontFamily.fangzhenglanting:
+        return '方正兰亭';
+      case EpubFontFamily.fangzhengyasong:
+        return '方正雅宋';
     }
   }
 }
@@ -330,18 +327,14 @@ enum EpubFontFamily {
 extension EpubFontFamilyExtension on EpubFontFamily {
   String get cssValue {
     switch (this) {
-      case EpubFontFamily.systemDefault:
-        return '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif';
-      case EpubFontFamily.microsoftYaHei:
-        return '"Microsoft YaHei", "微软雅黑", "PingFang SC", "Heiti SC", "黑体", Arial, sans-serif';
-      case EpubFontFamily.simSun:
-        return '"SimSun", "5B8B4F53", "STSong", "华文宋体", Times, serif';
-      case EpubFontFamily.monospace:
-        return '"Courier New", Courier, monospace';
+      case EpubFontFamily.fangzhengkaite:
+        return 'FZKTJW';
+      case EpubFontFamily.fangzhenglanting:
+        return 'FZLanTYJW_Zhun';
+      case EpubFontFamily.fangzhengyasong:
+        return 'FZZHUNYSJW';
     }
   }
-
-  // ... 其他展示给用户的名称
 }
 
 class LocalServerController {
