@@ -305,6 +305,15 @@ class EpubController {
       source: "setFontFamily('${fontFamily.cssValue}')",
     );
   }
+
+  /// Get content of an element by URL (hash)
+  Future<String?> getContentFromUrl(String url) async {
+    checkEpubLoaded();
+    final result = await webViewController?.evaluateJavascript(
+      source: 'getContentFromUrl("$url")',
+    );
+    return result?.toString();
+  }
 }
 
 enum EpubFontFamily {

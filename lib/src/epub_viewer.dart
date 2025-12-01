@@ -28,6 +28,7 @@ class EpubViewer extends StatefulWidget {
     this.onChaptersLoaded,
     this.onEpubLoaded,
     this.onLocationLoaded,
+    this.onLinkPressed,
     this.onRelocated,
     //this.onTextSelected,
     this.displaySettings,
@@ -58,6 +59,7 @@ class EpubViewer extends StatefulWidget {
 
   /// Callback when the location are generated for epub, progress will be only available after this
   final VoidCallback? onLocationLoaded;
+  final void Function(String href)? onLinkPressed;
 
   ///Call back when chapters are loaded
   final ValueChanged<List<EpubChapter>>? onChaptersLoaded;
@@ -257,6 +259,15 @@ class _EpubViewerState extends State<EpubViewer> {
   }
 
   void addJavaScriptHandlers() {
+    webViewController?.addJavaScriptHandler(
+      handlerName: "linkClicked",
+      callback: (data) {
+        if (data.isNotEmpty) {
+          widget.onLinkPressed?.call(data[0].toString());
+        }
+      },
+    );
+
     webViewController?.addJavaScriptHandler(
       handlerName: "displayed",
       callback: (data) {
