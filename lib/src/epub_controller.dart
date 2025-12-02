@@ -317,18 +317,21 @@ class EpubController {
 }
 
 enum EpubFontFamily {
+  fangzhengyouhei, //FZYouHJW_508R.TTF
   fangzhengyasong, //FZZHUNYSJW.TTF
   fangzhengkaite, //FZKTJW.TTF
   fangzhenglanting; //FZLanTYJW_Zhun.TTF
 
   String get displayName {
     switch (this) {
+      case EpubFontFamily.fangzhengyouhei:
+        return '方正悠黑';
       case EpubFontFamily.fangzhengkaite:
         return '方正楷体';
       case EpubFontFamily.fangzhenglanting:
-        return '方正兰亭';
+        return '方正兰亭圆';
       case EpubFontFamily.fangzhengyasong:
-        return '方正雅宋';
+        return '方正准雅宋';
     }
   }
 }
@@ -336,6 +339,8 @@ enum EpubFontFamily {
 extension EpubFontFamilyExtension on EpubFontFamily {
   String get cssValue {
     switch (this) {
+      case EpubFontFamily.fangzhengyouhei:
+        return 'FZYouHJW_508R';
       case EpubFontFamily.fangzhengkaite:
         return 'FZKTJW';
       case EpubFontFamily.fangzhenglanting:
