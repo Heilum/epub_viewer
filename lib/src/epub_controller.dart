@@ -207,6 +207,13 @@ class EpubController {
     );
   }
 
+  ///Set line spacing in epub viewer
+  setLineSpacing({required double spacing}) async {
+    await webViewController?.evaluateJavascript(
+      source: 'setLineSpacing($spacing)',
+    );
+  }
+
   ///Enable or disable swipe/page-turn in the underlying JS viewer.
   ///
   ///This uses the global `setSwipeEnabled` function defined in `epubView.js`
