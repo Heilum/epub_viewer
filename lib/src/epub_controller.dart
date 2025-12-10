@@ -109,7 +109,7 @@ class EpubController {
     required String cfi,
 
     ///Color of the highlight
-    Color color = Colors.yellow,
+    Color color = const Color(0xFFFF7300),
 
     ///Opacity of the highlight
     double opacity = 0.3,
