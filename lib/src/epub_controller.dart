@@ -334,6 +334,18 @@ class EpubController {
     }
     return -1;
   }
+
+  /// Get total pages count (based on locations)
+  Future<int> getTotalPages() async {
+    checkEpubLoaded();
+    final result = await webViewController?.evaluateJavascript(
+      source: 'getTotalPages()',
+    );
+    if (result is num) {
+      return result.toInt();
+    }
+    return 0;
+  }
 }
 
 enum EpubFontFamily {
