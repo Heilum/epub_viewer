@@ -321,31 +321,6 @@ class EpubController {
     );
     return result?.toString();
   }
-
-  /// Get page number from CFI (1-based)
-  Future<int> getPageNumberFromCfi(String cfi) async {
-    checkEpubLoaded();
-    final result = await webViewController?.evaluateJavascript(
-      source: 'getPageNumberFromCfi("$cfi")',
-    );
-    print("getPageNumberFromCfi result: $result, type: ${result.runtimeType}");
-    if (result is num) {
-      return result.toInt();
-    }
-    return -1;
-  }
-
-  /// Get total pages count (based on locations)
-  Future<int> getTotalPages() async {
-    checkEpubLoaded();
-    final result = await webViewController?.evaluateJavascript(
-      source: 'getTotalPages()',
-    );
-    if (result is num) {
-      return result.toInt();
-    }
-    return 0;
-  }
 }
 
 enum EpubFontFamily {
