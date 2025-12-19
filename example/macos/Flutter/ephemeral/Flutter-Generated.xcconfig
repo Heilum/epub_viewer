@@ -1,6 +1,6 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=/Users/fayismuhammed/flutter
-FLUTTER_APPLICATION_PATH=/Users/fayismuhammed/Projects/Flutter /epub_viewer/example
+FLUTTER_ROOT=/Applications/flutter
+FLUTTER_APPLICATION_PATH=/Users/wanfeichen/work/2025/joy_reader/src/epub_viewer/example
 COCOAPODS_PARALLEL_CODE_SIGN=true
 FLUTTER_BUILD_DIR=build
 FLUTTER_BUILD_NAME=1.0.0

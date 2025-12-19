@@ -6,6 +6,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../flutter_epub_viewer.dart';
 import 'utils.dart';
 
+import 'dart:convert';
+
 /// Callback for text selection events with WebView-relative coordinates.
 ///
 /// Provides precise positioning information for implementing custom selection UI.
@@ -41,6 +43,7 @@ class EpubViewer extends StatefulWidget {
     this.clearSelectionOnPageChange = true,
     this.onSwipe,
     this.onScroll,
+    this.pendingInitialSettings, // 新增这一行
   });
 
   //Epub controller to manage epub
@@ -49,6 +52,7 @@ class EpubViewer extends StatefulWidget {
   ///Epub source, accepts url, file or assets
   ///opf format is not tested, use with caution
   final EpubSource epubSource;
+  final Map<String, dynamic>? pendingInitialSettings; // 新增这三行
 
   ///Initial cfi string to  specify which part of epub to load initially
   ///if null, the first chapter will be loaded
@@ -413,10 +417,13 @@ class _EpubViewerState extends State<EpubViewer> {
     }
 
     bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
-
+    // Convert pendingInitialSettings to JSON string
+    final settingsJson = widget.pendingInitialSettings != null
+        ? jsonEncode(widget.pendingInitialSettings)
+        : 'null';
     webViewController?.evaluateJavascript(
       source:
-          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${backgroundColor ?? ''}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis", ${fontFamily == null ? 'null' : '"$fontFamily"'}, ${margin ?? 'null'})',
+          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${backgroundColor ?? ''}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis", ${fontFamily == null ? 'null' : '"$fontFamily"'}, ${margin ?? 'null'}, $settingsJson)',
     );
   }
 
