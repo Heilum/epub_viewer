@@ -43,6 +43,7 @@ class EpubViewer extends StatefulWidget {
     this.clearSelectionOnPageChange = true,
     this.onSwipe,
     this.onScroll,
+    this.onBlankAreaTap,
     this.pendingInitialSettings, // 新增这一行
   });
 
@@ -100,6 +101,12 @@ class EpubViewer extends StatefulWidget {
   /// - 'none'  : scrollTop did not change since last event
   final void Function(double scrollTop, double maxScrollTop, String direction)?
   onScroll;
+
+  /// Callback when user taps on blank area (not on text or links).
+  ///
+  /// Only fires in paginated mode on iOS when user taps on empty space
+  /// without any active text selection. Use this to toggle UI chrome visibility.
+  final VoidCallback? onBlankAreaTap;
 
   /// Callback when text is selected with WebView-relative coordinates.
   ///
@@ -380,6 +387,13 @@ class _EpubViewerState extends State<EpubViewer> {
         final direction = payload['direction'] as String? ?? 'none';
 
         widget.onScroll?.call(scrollTop, maxScrollTop, direction);
+      },
+    );
+
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'blankAreaTap',
+      callback: (args) {
+        widget.onBlankAreaTap?.call();
       },
     );
   }
