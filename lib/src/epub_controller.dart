@@ -288,6 +288,26 @@ class EpubController {
     );
   }
 
+  ///Set the reading progress of the entire book and jump to that position
+  ///
+  ///[progress] should be a value between 0.0 and 1.0, where:
+  ///- 0.0 represents the start of the book
+  ///- 1.0 represents the end of the book
+  ///- 0.5 represents the middle of the book
+  ///
+  ///Example:
+  ///```dart
+  ///epubController.setReadingProgress(0.5); // Jump to 50% of the book
+  ///```
+  setReadingProgress(double progress) {
+    assert(
+      progress >= 0.0 && progress <= 1.0,
+      'Progress must be between 0.0 and 1.0',
+    );
+    checkEpubLoaded();
+    webViewController?.evaluateJavascript(source: 'toProgress($progress)');
+  }
+
   ///Moves to the first page of the epub
   moveToFistPage() {
     toProgressPercentage(0.0);
