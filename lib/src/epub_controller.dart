@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:epubx/epubx.dart' as epubx;
 import 'package:flutter/material.dart';
 import 'package:flutter_epub_viewer/src/epub_metadata.dart';
 import 'package:flutter_epub_viewer/src/models/epub_display_settings.dart';
@@ -8,6 +10,7 @@ import 'package:flutter_epub_viewer/src/models/epub_search_result.dart';
 import 'package:flutter_epub_viewer/src/models/epub_text_extract_res.dart';
 import 'package:flutter_epub_viewer/src/utils.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:http/http.dart' as http;
 
 import 'models/epub_chapter.dart';
 import 'models/epub_theme.dart';
@@ -75,6 +78,71 @@ class EpubController {
 
     _chapters = parseChapterList(result);
     return _chapters;
+  }
+
+  /// Parses chapters from a remote EPUB file by URL before loading into webView
+  ///
+  /// This method downloads the EPUB file from the given URL and parses its
+  /// chapter structure without loading it into the webView. This allows you
+  /// to get the table of contents before the viewer is initialized.
+  ///
+  /// Parameters:
+  /// - [url]: The URL of the remote EPUB file
+  /// - [headers]: Optional HTTP headers for the request
+  ///
+  /// Returns a list of [EpubChapter] containing the EPUB's table of contents
+  ///
+  /// Example:
+  /// ```dart
+  /// final chapters = await epubController.parseEpubByUrl(
+  ///   'https://example.com/book.epub',
+  /// );
+  /// print('Found ${chapters.length} chapters');
+  /// ```
+  static Future<List<EpubChapter>> parseEpubByUrl(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      // Download the EPUB file
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to download EPUB from URL: ${response.statusCode}',
+        );
+      }
+
+      final Uint8List epubBytes = response.bodyBytes;
+
+      // Parse the EPUB using epubx library
+      final epubx.EpubBook epubBook = await epubx.EpubReader.readBook(
+        epubBytes,
+      );
+
+      // Convert epubx chapters to our EpubChapter format
+      final List<EpubChapter> chapters = _convertEpubxChapters(
+        epubBook.Chapters ?? [],
+      );
+
+      return chapters;
+    } catch (e) {
+      throw Exception('Failed to parse EPUB from URL: $e');
+    }
+  }
+
+  /// Helper method to convert epubx.EpubChapter to our EpubChapter format
+  static List<EpubChapter> _convertEpubxChapters(
+    List<epubx.EpubChapter> epubxChapters,
+  ) {
+    return epubxChapters.map((chapter) {
+      return EpubChapter(
+        title: chapter.Title ?? 'Untitled',
+        href: chapter.ContentFileName ?? '',
+        id: chapter.Anchor ?? '',
+        subitems: _convertEpubxChapters(chapter.SubChapters ?? []),
+      );
+    }).toList();
   }
 
   Future<EpubMetadata> getMetadata() async {
