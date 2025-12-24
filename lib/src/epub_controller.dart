@@ -136,10 +136,23 @@ class EpubController {
     List<epubx.EpubChapter> epubxChapters,
   ) {
     return epubxChapters.map((chapter) {
+      final contentFileName = chapter.ContentFileName ?? '';
+      final anchor = chapter.Anchor ?? '';
+
+      // 组合 ContentFileName 和 Anchor 形成完整的 href
+      // 如果有 anchor，则添加 # 前缀
+      final href = anchor.isNotEmpty
+          ? '$contentFileName#$anchor'
+          : contentFileName;
+
+      debugPrint(
+        "解析章节 title:${chapter.Title}, ContentFileName:$contentFileName, anchor:$anchor, 完整href:$href",
+      );
+
       return EpubChapter(
         title: chapter.Title ?? 'Untitled',
-        href: chapter.ContentFileName ?? '',
-        id: chapter.Anchor ?? '',
+        href: href,
+        id: anchor,
         subitems: _convertEpubxChapters(chapter.SubChapters ?? []),
       );
     }).toList();
