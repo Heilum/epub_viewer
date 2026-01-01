@@ -18,8 +18,7 @@ import 'dart:convert';
 /// * [cfiRange] - The EPUB CFI (Canonical Fragment Identifier) range for the selection
 /// * [selectionRect] - The bounding rectangle of the selected text (WebView-relative)
 /// * [viewRect] - The bounding rectangle of the entire WebView
-typedef EpubSelectionCallback =
-    void Function(String selectedText, String cfiRange, Rect selectionRect);
+typedef EpubSelectionCallback = void Function(String selectedText, String cfiRange, Rect selectionRect);
 
 class EpubViewer extends StatefulWidget {
   const EpubViewer({
@@ -45,6 +44,8 @@ class EpubViewer extends StatefulWidget {
     this.onScroll,
     this.onBlankAreaTap,
     this.pendingInitialSettings, // 新增这一行
+    this.onPreviousArticle,
+    this.onNextArticle,
   });
 
   //Epub controller to manage epub
@@ -99,8 +100,7 @@ class EpubViewer extends StatefulWidget {
   /// - 'down'  : user scrolled towards the end of the document
   /// - 'up'    : user scrolled towards the beginning
   /// - 'none'  : scrollTop did not change since last event
-  final void Function(double scrollTop, double maxScrollTop, String direction)?
-  onScroll;
+  final void Function(double scrollTop, double maxScrollTop, String direction)? onScroll;
 
   /// Callback when user taps on blank area (not on text or links).
   ///
@@ -155,6 +155,18 @@ class EpubViewer extends StatefulWidget {
   /// note that the selection may not be visible on the new page.
   final bool clearSelectionOnPageChange;
 
+  /// Callback when user clicks the "Previous Article" button in the navigation bar.
+  ///
+  /// This is triggered by JavaScript when the user clicks the previous button
+  /// that was injected via addPreviousAndNextByJs().
+  final VoidCallback? onPreviousArticle;
+
+  /// Callback when user clicks the "Next Article" button in the navigation bar.
+  ///
+  /// This is triggered by JavaScript when the user clicks the next button
+  /// that was injected via addPreviousAndNextByJs().
+  final VoidCallback? onNextArticle;
+
   @override
   State<EpubViewer> createState() => _EpubViewerState();
 }
@@ -199,20 +211,12 @@ class _EpubViewerState extends State<EpubViewer> {
     final axis = displaySettings.axis;
 
     final recognizers = <Factory<OneSequenceGestureRecognizer>>{
-      Factory<LongPressGestureRecognizer>(
-        () => LongPressGestureRecognizer(
-          duration: const Duration(milliseconds: 30),
-        ),
-      ),
+      Factory<LongPressGestureRecognizer>(() => LongPressGestureRecognizer(duration: const Duration(milliseconds: 30))),
     };
 
     // 垂直滚动或垂直分页：需要纵向拖动交给 WebView
     if (flow == EpubFlow.scrolled || axis == EpubAxis.vertical) {
-      recognizers.add(
-        Factory<VerticalDragGestureRecognizer>(
-          () => VerticalDragGestureRecognizer(),
-        ),
-      );
+      recognizers.add(Factory<VerticalDragGestureRecognizer>(() => VerticalDragGestureRecognizer()));
 
       debugPrint('允许纵向拖动 added');
     }
@@ -308,11 +312,7 @@ class _EpubViewerState extends State<EpubViewer> {
         final selectedText = args[0] as String;
         final cfi = args[1] as String;
         final rect = args[2] as Map<String, dynamic>;
-        _handleSelectionChanging(
-          selectedText: selectedText,
-          cfi: cfi,
-          rect: rect,
-        );
+        _handleSelectionChanging(selectedText: selectedText, cfi: cfi, rect: rect);
       },
     );
 
@@ -321,9 +321,7 @@ class _EpubViewerState extends State<EpubViewer> {
       callback: (data) async {
         var searchResult = data[0];
         widget.epubController.searchResultCompleter.complete(
-          List<EpubSearchResult>.from(
-            searchResult.map((e) => EpubSearchResult.fromJson(e)),
-          ),
+          List<EpubSearchResult>.from(searchResult.map((e) => EpubSearchResult.fromJson(e))),
         );
       },
     );
@@ -363,9 +361,7 @@ class _EpubViewerState extends State<EpubViewer> {
       callback: (data) {
         var text = data[0].trim();
         var cfi = data[1];
-        widget.epubController.pageTextCompleter.complete(
-          EpubTextExtractRes(text: text, cfiRange: cfi),
-        );
+        widget.epubController.pageTextCompleter.complete(EpubTextExtractRes(text: text, cfiRange: cfi));
       },
     );
 
@@ -396,6 +392,20 @@ class _EpubViewerState extends State<EpubViewer> {
         widget.onBlankAreaTap?.call();
       },
     );
+
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'onPreviousArticle',
+      callback: (args) {
+        widget.onPreviousArticle?.call();
+      },
+    );
+
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'onNextArticle',
+      callback: (args) {
+        widget.onNextArticle?.call();
+      },
+    );
   }
 
   Future<void> loadBook() async {
@@ -410,9 +420,7 @@ class _EpubViewerState extends State<EpubViewer> {
     bool snap = displaySettings.snap;
     bool allowScripted = displaySettings.allowScriptedContent;
     String cfi = widget.initialCfi ?? "";
-    String direction =
-        widget.displaySettings?.defaultDirection.name ??
-        EpubDefaultDirection.ltr.name;
+    String direction = widget.displaySettings?.defaultDirection.name ?? EpubDefaultDirection.ltr.name;
     int fontSize = displaySettings.fontSize;
     String? fontFamily = displaySettings.fontFamily;
     double? margin = displaySettings.horizontalMargin;
@@ -422,8 +430,7 @@ class _EpubViewerState extends State<EpubViewer> {
     bool useCustomSwipe = false;
     //  Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
 
-    String? foregroundColor = widget.displaySettings?.theme?.foregroundColor
-        ?.toHex();
+    String? foregroundColor = widget.displaySettings?.theme?.foregroundColor?.toHex();
     String? backgroundColor;
     final decoration = widget.displaySettings?.theme?.backgroundDecoration;
     if (decoration is BoxDecoration) {
@@ -432,9 +439,7 @@ class _EpubViewerState extends State<EpubViewer> {
 
     bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
     // Convert pendingInitialSettings to JSON string
-    final settingsJson = widget.pendingInitialSettings != null
-        ? jsonEncode(widget.pendingInitialSettings)
-        : 'null';
+    final settingsJson = widget.pendingInitialSettings != null ? jsonEncode(widget.pendingInitialSettings) : 'null';
     webViewController?.evaluateJavascript(
       source:
           'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${backgroundColor ?? ''}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis", ${fontFamily == null ? 'null' : '"$fontFamily"'}, ${margin ?? 'null'}, $settingsJson)',
@@ -449,19 +454,15 @@ class _EpubViewerState extends State<EpubViewer> {
         contextMenu: widget.suppressNativeContextMenu
             ? ContextMenu(
                 menuItems: [],
-                settings: ContextMenuSettings(
-                  hideDefaultSystemContextMenuItems: true,
-                ),
+                settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: true),
                 onCreateContextMenu: (hitTestResult) async {
                   // Completely disable context menu
                 },
               )
             : widget.selectionContextMenu,
         key: webViewKey,
-        initialFile:
-            'packages/flutter_epub_viewer/lib/assets/webpage/html/swipe.html',
-        initialSettings: settings
-          ..disableVerticalScroll = widget.displaySettings?.snap ?? false,
+        initialFile: 'packages/flutter_epub_viewer/lib/assets/webpage/html/swipe.html',
+        initialSettings: settings..disableVerticalScroll = widget.displaySettings?.snap ?? false,
         onWebViewCreated: (controller) async {
           webViewController = controller;
           widget.epubController.setWebViewController(controller);
@@ -469,10 +470,7 @@ class _EpubViewerState extends State<EpubViewer> {
         },
         onLoadStart: (controller, url) {},
         onPermissionRequest: (controller, request) async {
-          return PermissionResponse(
-            resources: request.resources,
-            action: PermissionResponseAction.GRANT,
-          );
+          return PermissionResponse(resources: request.resources, action: PermissionResponseAction.GRANT);
         },
         shouldOverrideUrlLoading: (controller, navigationAction) async {
           return NavigationActionPolicy.ALLOW;

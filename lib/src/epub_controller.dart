@@ -24,6 +24,26 @@ class EpubController {
     webViewController = controller;
   }
 
+  ///Execute custom JavaScript code in the EPUB viewer
+  ///
+  ///This method allows you to execute arbitrary JavaScript code
+  ///in the context of the EPUB viewer's WebView.
+  ///
+  ///[source] - The JavaScript code to execute
+  ///
+  ///Returns the result of the JavaScript execution
+  ///
+  ///Example:
+  ///```dart
+  ///final result = await epubController.evaluateJavascript(
+  ///  source: 'window.myCustomVariable',
+  ///);
+  ///```
+  Future<dynamic> evaluateJavascript({required String source}) async {
+    checkEpubLoaded();
+    return await webViewController?.evaluateJavascript(source: source);
+  }
+
   ///Move epub view to specific area using Cfi string or chapter href
   display({
     ///Cfi String of the desired location, also accepts chapter href
@@ -342,6 +362,45 @@ class EpubController {
       source: 'getContentFromUrl("$url")',
     );
     return result?.toString();
+  }
+
+  /// Add navigation buttons (Previous/Next) to the end of EPUB content
+  ///
+  /// [hasPrevious] - Whether previous article is available
+  /// [hasNext] - Whether next article is available
+  ///
+  /// The buttons will be styled with:
+  /// - Active button: #FF9945 background
+  /// - Inactive button: #FBC9A0 background
+  ///
+  /// Example:
+  /// ```dart
+  /// epubController.addNavigationButtons(
+  ///   hasPrevious: true,
+  ///   hasNext: false,
+  /// );
+  /// ```
+  Future<void> addNavigationButtons({
+    required bool hasPrevious,
+    required bool hasNext,
+  }) async {
+    checkEpubLoaded();
+    await webViewController?.evaluateJavascript(
+      source: 'addNavigationButtons($hasPrevious, $hasNext)',
+    );
+  }
+
+  /// Remove navigation buttons from EPUB content
+  ///
+  /// Example:
+  /// ```dart
+  /// epubController.removeNavigationButtons();
+  /// ```
+  Future<void> removeNavigationButtons() async {
+    checkEpubLoaded();
+    await webViewController?.evaluateJavascript(
+      source: 'removeNavigationButtons()',
+    );
   }
 }
 
