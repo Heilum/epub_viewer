@@ -175,6 +175,7 @@ class _EpubViewerState extends State<EpubViewer> {
   final GlobalKey webViewKey = GlobalKey();
 
   var selectedText = '';
+  bool _epubInitiallyLoaded = false; // Track whether the first 'displayed' event has fired
 
   InAppWebViewController? webViewController;
 
@@ -286,7 +287,16 @@ class _EpubViewerState extends State<EpubViewer> {
     webViewController?.addJavaScriptHandler(
       handlerName: "displayed",
       callback: (data) {
-        widget.onEpubLoaded?.call();
+        // Only fire onEpubLoaded for the first 'displayed' event.
+        // Subsequent 'displayed' events are triggered by section/chapter changes
+        // when flipping pages across chapter boundaries, and should NOT re-run
+        // the full onEpubLoaded logic (which re-injects annotations, nav buttons, etc.).
+        if (!_epubInitiallyLoaded) {
+          _epubInitiallyLoaded = true;
+          widget.onEpubLoaded?.call();
+        } else {
+          debugPrint("跳过重复加载");
+        }
       },
     );
 
@@ -411,7 +421,9 @@ class _EpubViewerState extends State<EpubViewer> {
   Future<void> loadBook() async {
     var data = await widget.epubSource.epubData;
     final displaySettings = widget.displaySettings ?? EpubDisplaySettings();
-    String manager = displaySettings.manager.name;
+    // 'default' is a reserved keyword in Dart, so the enum uses 'defaultManager'.
+    // Map it to the actual epub.js manager name 'default'.
+    String manager = displaySettings.manager == EpubManager.defaultManager ? 'default' : displaySettings.manager.name;
     String flow = displaySettings.flow.name;
     String spread = displaySettings.spread.name;
     String axis = displaySettings.axis.name;
@@ -425,10 +437,7 @@ class _EpubViewerState extends State<EpubViewer> {
     String? fontFamily = displaySettings.fontFamily;
     double? margin = displaySettings.horizontalMargin;
 
-    // 与原始仓库保持一致：
-    // 仅在 Android 且未启用 snap 动画时使用自定义 swipe，iOS 依赖 epub.js 自带的分页动画。
     bool useCustomSwipe = false;
-    //  Platform.isAndroid && !displaySettings.useSnapAnimationAndroid;
 
     String? foregroundColor = widget.displaySettings?.theme?.foregroundColor?.toHex();
     String? backgroundColor;

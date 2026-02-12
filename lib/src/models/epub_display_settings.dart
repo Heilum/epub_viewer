@@ -56,8 +56,7 @@ class EpubDisplaySettings {
     this.fontFamily,
     this.horizontalMargin,
   });
-  factory EpubDisplaySettings.fromJson(Map<String, dynamic> json) =>
-      _$EpubDisplaySettingsFromJson(json);
+  factory EpubDisplaySettings.fromJson(Map<String, dynamic> json) => _$EpubDisplaySettingsFromJson(json);
   Map<String, dynamic> toJson() => _$EpubDisplaySettingsToJson(this);
 }
 
@@ -84,13 +83,15 @@ enum EpubDefaultDirection { ltr, rtl }
 
 enum EpubManager {
   continuous,
+  @JsonValue('default')
+  defaultManager,
   // epub
 }
 
 enum EpubAxis {
   /// Horizontal pagination (left-right swipe)
   horizontal,
-  
+
   /// Vertical pagination (up-down swipe)
   vertical,
 }
