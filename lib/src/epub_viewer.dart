@@ -104,8 +104,9 @@ class EpubViewer extends StatefulWidget {
 
   /// Callback when user taps on blank area (not on text or links).
   ///
-  /// Only fires in paginated mode on iOS when user taps on empty space
-  /// without any active text selection. Use this to toggle UI chrome visibility.
+  /// Fires in both paginated and scrolled modes on iOS and Android when
+  /// user taps on empty space without any active text selection.
+  /// Use this to toggle UI chrome visibility.
   final VoidCallback? onBlankAreaTap;
 
   /// Callback when text is selected with WebView-relative coordinates.
