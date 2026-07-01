@@ -195,6 +195,7 @@ class _EpubViewerState extends State<EpubViewer> {
     disableContextMenu: true, // Disable native context menu
     allowFileAccessFromFileURLs: true,
     allowUniversalAccessFromFileURLs: true,
+    allowFileAccess: false,
   );
 
   @override
