@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_epub_viewer/src/epub_metadata.dart';
@@ -9,7 +8,6 @@ import 'package:flutter_epub_viewer/src/models/epub_search_result.dart';
 import 'package:flutter_epub_viewer/src/models/epub_text_extract_res.dart';
 import 'package:flutter_epub_viewer/src/utils.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:http/http.dart' as http;
 
 import 'models/epub_chapter.dart';
 import 'models/epub_theme.dart';
@@ -44,13 +42,23 @@ class EpubController {
     return await webViewController?.evaluateJavascript(source: source);
   }
 
-  ///Move epub view to specific area using Cfi string or chapter href
+  ///Move epub view to specific area using Cfi string
   display({
-    ///Cfi String of the desired location, also accepts chapter href
+    ///Cfi String of the desired location
     required String cfi,
   }) {
     checkEpubLoaded();
     webViewController?.evaluateJavascript(source: 'toCfi("$cfi")');
+  }
+
+  ///Move epub view to a chapter/bookmark target that may be either a CFI or a
+  ///spine href (e.g. `Part0002.xhtml#sigil_toc_id_1`).
+  ///
+  ///TOC hrefs are matched against the spine, so hrefs that are relative to a
+  ///different directory still resolve.
+  displayHref(String href) {
+    checkEpubLoaded();
+    webViewController?.evaluateJavascript(source: 'displayHref("${href.replaceAll('"', r'\"')}")');
   }
 
   ///Moves to next page in epub view
@@ -150,24 +158,6 @@ class EpubController {
     webViewController?.evaluateJavascript(source: 'addUnderLine("$cfi", "$colorHex", $isDashed)');
   }
 
-  ///Adds a mark annotation
-  // addMark({
-  //   ///Cfi string of the desired location
-  //   required String cfi,
-  //
-  //   ///Color of the mark underline
-  //   Color color = Colors.red,
-  //
-  //   ///Whether to use dashed line style
-  //   bool isDashed = true,
-  // }) {
-  //   checkEpubLoaded();
-  //   var colorHex = color.toHex();
-  //   webViewController?.evaluateJavascript(
-  //     source: 'addMark("$cfi", "$colorHex", $isDashed)',
-  //   );
-  // }
-
   ///Removes a highlight from epub viewer
   removeHighlight({required String cfi}) {
     checkEpubLoaded();
@@ -179,12 +169,6 @@ class EpubController {
     checkEpubLoaded();
     webViewController?.evaluateJavascript(source: 'removeUnderLine("$cfi")');
   }
-
-  ///Removes a mark from epub viewer
-  // removeMark({required String cfi}) {
-  //   checkEpubLoaded();
-  //   webViewController?.evaluateJavascript(source: 'removeMark("$cfi")');
-  // }
 
   ///Set [EpubSpread] value
   setSpread({required EpubSpread spread}) async {
@@ -204,11 +188,6 @@ class EpubController {
   ///Adjust font size in epub viewer
   setFontSize({required double fontSize}) async {
     await webViewController?.evaluateJavascript(source: 'setFontSize("$fontSize")');
-  }
-
-  ///Set horizontal margin in epub viewer
-  setHorizontalMargin({required double margin}) async {
-    await webViewController?.evaluateJavascript(source: 'setHorizontalMargin($margin)');
   }
 
   ///Set line spacing in epub viewer
@@ -270,14 +249,6 @@ class EpubController {
     return pageTextCompleter.future;
   }
 
-  ///Given a percentage moves to the corresponding page
-  ///Progress percentage should be between 0.0 and 1.0
-  toProgressPercentage(double progressPercent) {
-    assert(progressPercent >= 0.0 && progressPercent <= 1.0, 'Progress percentage must be between 0.0 and 1.0');
-    checkEpubLoaded();
-    webViewController?.evaluateJavascript(source: 'toProgress($progressPercent)');
-  }
-
   ///Set the reading progress of the entire book and jump to that position
   ///
   ///[progress] should be a value between 0.0 and 1.0, where:
@@ -293,16 +264,6 @@ class EpubController {
     assert(progress >= 0.0 && progress <= 1.0, 'Progress must be between 0.0 and 1.0');
     checkEpubLoaded();
     webViewController?.evaluateJavascript(source: 'toProgress($progress)');
-  }
-
-  ///Moves to the first page of the epub
-  moveToFistPage() {
-    toProgressPercentage(0.0);
-  }
-
-  ///Moves to the last page of the epub
-  moveToLastPage() {
-    toProgressPercentage(1.0);
   }
 
   checkEpubLoaded() {
@@ -355,36 +316,46 @@ class EpubController {
     return -1;
   }
 
-  /// Add navigation buttons (Previous/Next) to the end of EPUB content
+  /// Append "上一篇 / 下一篇" buttons at the end of the epub content.
   ///
-  /// [hasPrevious] - Whether previous article is available
-  /// [hasNext] - Whether next article is available
-  ///
-  /// The buttons will be styled with:
-  /// - Active button: #FF9945 background
-  /// - Inactive button: #FBC9A0 background
-  ///
-  /// Example:
-  /// ```dart
-  /// epubController.addNavigationButtons(
-  ///   hasPrevious: true,
-  ///   hasNext: false,
-  /// );
-  /// ```
+  /// A disabled button is rendered greyed out. Taps are reported through
+  /// [EpubViewer.onPreviousArticle] / [EpubViewer.onNextArticle].
   Future<void> addNavigationButtons({required bool hasPrevious, required bool hasNext}) async {
     checkEpubLoaded();
     await webViewController?.evaluateJavascript(source: 'addNavigationButtons($hasPrevious, $hasNext)');
   }
 
-  /// Remove navigation buttons from EPUB content
-  ///
-  /// Example:
-  /// ```dart
-  /// epubController.removeNavigationButtons();
-  /// ```
+  /// Remove the navigation buttons added by [addNavigationButtons].
   Future<void> removeNavigationButtons() async {
     checkEpubLoaded();
     await webViewController?.evaluateJavascript(source: 'removeNavigationButtons()');
+  }
+
+  /// Title of the TOC chapter containing [cfi], empty when it cannot be resolved.
+  Future<String> getChapterTitle(String cfi) async {
+    checkEpubLoaded();
+    final result = await webViewController?.evaluateJavascript(
+      source: 'getChapterTitleForCfi("${cfi.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}")',
+    );
+    if (result == null) return '';
+
+    var title = result.toString().trim();
+    // InAppWebView may wrap the result in extra quotes
+    if (title.length >= 2 && title.startsWith('"') && title.endsWith('"')) {
+      title = title.substring(1, title.length - 1);
+    }
+    return title == 'null' ? '' : title;
+  }
+
+  /// Patch epub.js' continuous manager so that swiping across a chapter
+  /// boundary in paginated mode turns exactly one page.
+  ///
+  /// Without it, iOS fails to compensate the scroll offset when epub.js
+  /// prepends a section, which makes the reader jump several pages.
+  /// Safe to call more than once — only the first call has an effect.
+  Future<void> applyPaginatedBoundaryPatches() async {
+    checkEpubLoaded();
+    await webViewController?.evaluateJavascript(source: 'applyPaginatedBoundaryPatches()');
   }
 }
 

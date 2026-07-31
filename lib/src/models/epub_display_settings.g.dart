@@ -19,7 +19,7 @@ EpubDisplaySettings _$EpubDisplaySettingsFromJson(Map<String, dynamic> json) => 
   theme: json['theme'] == null ? null : EpubTheme.fromJson(json['theme'] as Map<String, dynamic>),
   axis: $enumDecodeNullable(_$EpubAxisEnumMap, json['axis']) ?? EpubAxis.horizontal,
   fontFamily: json['fontFamily'] as String?,
-  horizontalMargin: (json['horizontalMargin'] as num?)?.toDouble(),
+  lineSpacing: (json['lineSpacing'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$EpubDisplaySettingsToJson(EpubDisplaySettings instance) {
@@ -43,7 +43,7 @@ Map<String, dynamic> _$EpubDisplaySettingsToJson(EpubDisplaySettings instance) {
   writeNotNull('theme', instance.theme?.toJson());
   val['axis'] = _$EpubAxisEnumMap[instance.axis]!;
   writeNotNull('fontFamily', instance.fontFamily);
-  writeNotNull('horizontalMargin', instance.horizontalMargin);
+  writeNotNull('lineSpacing', instance.lineSpacing);
   return val;
 }
 

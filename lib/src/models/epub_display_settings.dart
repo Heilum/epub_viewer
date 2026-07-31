@@ -39,8 +39,8 @@ class EpubDisplaySettings {
   /// Font family of the reader
   final String? fontFamily;
 
-  /// Horizontal margin of the reader
-  final double? horizontalMargin;
+  /// Line height of the reader content, as a multiplier (e.g. 1.67)
+  final double? lineSpacing;
 
   EpubDisplaySettings({
     this.fontSize = 15,
@@ -54,7 +54,7 @@ class EpubDisplaySettings {
     this.theme,
     this.axis = EpubAxis.horizontal,
     this.fontFamily,
-    this.horizontalMargin,
+    this.lineSpacing,
   });
   factory EpubDisplaySettings.fromJson(Map<String, dynamic> json) => _$EpubDisplaySettingsFromJson(json);
   Map<String, dynamic> toJson() => _$EpubDisplaySettingsToJson(this);

@@ -40,10 +40,8 @@ class EpubViewer extends StatefulWidget {
     this.onDeselection,
     this.suppressNativeContextMenu = false,
     this.clearSelectionOnPageChange = true,
-    this.onSwipe,
     this.onScroll,
     this.onBlankAreaTap,
-    this.pendingInitialSettings, // 新增这一行
     this.onPreviousArticle,
     this.onNextArticle,
   });
@@ -54,16 +52,19 @@ class EpubViewer extends StatefulWidget {
   ///Epub source, accepts url, file or assets
   ///opf format is not tested, use with caution
   final EpubSource epubSource;
-  final Map<String, dynamic>? pendingInitialSettings; // 新增这三行
 
-  ///Initial cfi string to  specify which part of epub to load initially
-  ///if null, the first chapter will be loaded
+  ///Initial location to display, either a cfi string or a chapter href
+  ///(e.g. `Part0002.xhtml#sigil_toc_id_1`).
+  ///If null, the first chapter will be loaded.
   final String? initialCfi;
 
-  ///Call back when epub is loaded and displayed
+  ///Called once the epub is displayed at [initialCfi] with [displaySettings]
+  ///fully applied, i.e. when the reader is ready to be shown to the user.
   final VoidCallback? onEpubLoaded;
 
-  /// Callback when the location are generated for epub, progress will be only available after this
+  /// Callback when the locations are generated for the epub. Locations are
+  /// generated in the background after the first render, until then
+  /// [EpubLocation.progress] is reported as -1.
   final VoidCallback? onLocationLoaded;
   final void Function(String href)? onFootNoteTap; // Changed from onLinkPressed
 
@@ -90,8 +91,6 @@ class EpubViewer extends StatefulWidget {
   /// When true, no native context menu will be shown on text selection.
   /// Use with [onSelection] to implement custom selection UI.
   final bool suppressNativeContextMenu;
-
-  final Function(String direction)? onSwipe;
 
   /// Callback when epub scrolls
   ///
@@ -174,9 +173,6 @@ class EpubViewer extends StatefulWidget {
 
 class _EpubViewerState extends State<EpubViewer> {
   final GlobalKey webViewKey = GlobalKey();
-
-  var selectedText = '';
-  bool _epubInitiallyLoaded = false; // Track whether the first 'displayed' event has fired
 
   InAppWebViewController? webViewController;
 
@@ -286,19 +282,12 @@ class _EpubViewerState extends State<EpubViewer> {
       },
     );
 
+    // Fired once, when the book is displayed at the initial cfi with all
+    // display settings applied. See startReading() in epubView.js.
     webViewController?.addJavaScriptHandler(
-      handlerName: "displayed",
+      handlerName: "readerReady",
       callback: (data) {
-        // Only fire onEpubLoaded for the first 'displayed' event.
-        // Subsequent 'displayed' events are triggered by section/chapter changes
-        // when flipping pages across chapter boundaries, and should NOT re-run
-        // the full onEpubLoaded logic (which re-injects annotations, nav buttons, etc.).
-        if (!_epubInitiallyLoaded) {
-          _epubInitiallyLoaded = true;
-          widget.onEpubLoaded?.call();
-        } else {
-          debugPrint("跳过重复加载");
-        }
+        widget.onEpubLoaded?.call();
       },
     );
 
@@ -347,7 +336,7 @@ class _EpubViewerState extends State<EpubViewer> {
     );
 
     webViewController?.addJavaScriptHandler(
-      handlerName: 'locationLoaded',
+      handlerName: 'locationsLoaded',
       callback: (arguments) {
         widget.onLocationLoaded?.call();
       },
@@ -420,40 +409,41 @@ class _EpubViewerState extends State<EpubViewer> {
     );
   }
 
+  /// Hand the epub bytes plus every initial setting to the JS side in one call.
+  ///
+  /// All display settings are applied *before* the first render, which is what
+  /// allows [EpubViewer.initialCfi] to be shown directly instead of rendering
+  /// page one and jumping afterwards.
   Future<void> loadBook() async {
-    var data = await widget.epubSource.epubData;
+    final data = await widget.epubSource.epubData;
     final displaySettings = widget.displaySettings ?? EpubDisplaySettings();
-    // 'default' is a reserved keyword in Dart, so the enum uses 'defaultManager'.
-    // Map it to the actual epub.js manager name 'default'.
-    String manager = displaySettings.manager == EpubManager.defaultManager ? 'default' : displaySettings.manager.name;
-    String flow = displaySettings.flow.name;
-    String spread = displaySettings.spread.name;
-    String axis = displaySettings.axis.name;
-    // 保持与原始 flutter_epub_viewer 一致：直接使用 displaySettings.snap
-    //（在 paginated 模式下用于分页动画，在 scrolled 模式下无实际效果）
-    bool snap = displaySettings.snap;
-    bool allowScripted = displaySettings.allowScriptedContent;
-    String cfi = widget.initialCfi ?? "";
-    String direction = widget.displaySettings?.defaultDirection.name ?? EpubDefaultDirection.ltr.name;
-    int fontSize = displaySettings.fontSize;
-    String? fontFamily = displaySettings.fontFamily;
-    double? margin = displaySettings.horizontalMargin;
 
-    bool useCustomSwipe = false;
-
-    String? foregroundColor = widget.displaySettings?.theme?.foregroundColor?.toHex();
     String? backgroundColor;
-    final decoration = widget.displaySettings?.theme?.backgroundDecoration;
+    final decoration = displaySettings.theme?.backgroundDecoration;
     if (decoration is BoxDecoration) {
       backgroundColor = decoration.color?.toHex();
     }
 
-    bool clearSelectionOnPageChange = widget.clearSelectionOnPageChange;
-    // Convert pendingInitialSettings to JSON string
-    final settingsJson = widget.pendingInitialSettings != null ? jsonEncode(widget.pendingInitialSettings) : 'null';
-    webViewController?.evaluateJavascript(
-      source:
-          'loadBook([${data.join(',')}], "$cfi", "$manager", "$flow", "$spread", $snap, $allowScripted, "$direction", $useCustomSwipe, "${backgroundColor ?? ''}", "$foregroundColor", "$fontSize", $clearSelectionOnPageChange, "$axis", ${fontFamily == null ? 'null' : '"$fontFamily"'}, ${margin ?? 'null'}, $settingsJson)',
+    final options = <String, dynamic>{
+      'cfi': widget.initialCfi ?? '',
+      // 'default' is a reserved keyword in Dart, so the enum uses
+      // 'defaultManager'. Map it back to the epub.js manager name.
+      'manager': displaySettings.manager == EpubManager.defaultManager ? 'default' : displaySettings.manager.name,
+      'flow': displaySettings.flow.name,
+      'spread': displaySettings.spread.name,
+      'snap': displaySettings.snap,
+      'allowScriptedContent': displaySettings.allowScriptedContent,
+      'direction': displaySettings.defaultDirection.name,
+      'clearSelectionOnPageChange': widget.clearSelectionOnPageChange,
+      'fontSize': displaySettings.fontSize,
+      'fontFamily': displaySettings.fontFamily,
+      'lineSpacing': displaySettings.lineSpacing,
+      'backgroundColor': backgroundColor,
+      'foregroundColor': displaySettings.theme?.foregroundColor?.toHex(),
+    }..removeWhere((_, value) => value == null);
+
+    await webViewController?.evaluateJavascript(
+      source: 'loadBook([${data.join(',')}], ${jsonEncode(options)})',
     );
   }
 
@@ -502,7 +492,11 @@ class _EpubViewerState extends State<EpubViewer> {
 
   @override
   void dispose() {
-    webViewController?.dispose();
+    // The InAppWebView widget disposes its own controller when it is removed
+    // from the tree — disposing it here as well made the platform controller be
+    // used after being disposed.
+    widget.epubController.webViewController = null;
+    webViewController = null;
     super.dispose();
   }
 }
